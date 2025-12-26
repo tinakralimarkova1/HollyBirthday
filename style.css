@@ -8,6 +8,7 @@
   --white: #FFFFFF;
   --mint: #2EF9A0;
   --blueberry: #a953eb;
+  --holly_blue: #093d9e;
 }
 
 html, body {
@@ -16,7 +17,7 @@ html, body {
   overflow: hidden;
   font-family: 'Baloo 2', system-ui, sans-serif;
   background: var(--periwinkle);
-  color: var(--indigo);
+  color: var(--holly_blue);
 }
 
 h1 {
@@ -65,7 +66,7 @@ canvas {
   align-items: center;
   justify-content: center;
   text-align: center;
-  pointer-events: none;
+  z-index: 10;
 
   color: var(--indigo);
 }
