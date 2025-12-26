@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap');
+
+:root {
+  --periwinkle: #8e95f4;
+  --indigo: #2B2EFF;
+  --coral: #FF6F61;
+  --yellow: #FFE066;
+  --white: #FFFFFF;
+  --mint: #2EF9A0;
+  --blueberry: #a953eb;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  background: var(--periwinkle);
+  color: var(--indigo);
+}
+
+h1 {
+    /* text style */
+    margin: 0;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    color: var(--indigo);
+    letter-spacing: 0.02em;
+
+    text-shadow:
+        -4px -4px 0 var(--white),
+            0   -4px 0 var(--white),
+            4px -4px 0 var(--white),
+        -4px  0   0 var(--white),
+            4px  0   0 var(--white),
+        -4px  4px 0 var(--white),
+            0    4px 0 var(--white),
+            4px  4px 0 var(--white),
+
+        /* shadows */
+            6px  6px 0 var(--coral),
+            9px  9px 0 rgba(43, 46, 255, 0.25);
+
+    /* animaition */
+    animation: float 3.5s ease-in-out infinite;
+    transform-origin: center;
+    
+
+
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+    50%      { transform: translateY(-30px) rotate(0.5deg); }
+  }
+
+canvas {
+  display: block;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+
+  color: var(--indigo);
+}
+
+#overlay p {
+  margin: 0.75rem 0 0;
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  color: var(--white);
+  text-shadow: 2px 2px 0 rgba(43, 46, 255, 0.25);
+}
+
+#startButton {
+  pointer-events: auto;
+  background-color: var(--coral);
+  border: none;
+  color: var(--white);
+  padding: 0.8em 1.4em;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  cursor: pointer;
+
+  box-shadow: 0.4rem 0.4rem 0 rgba(43, 46, 255, 0.25);
+
+}
+
