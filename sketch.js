@@ -1,4 +1,4 @@
-
+// confetti
 const CONFETTI_COLORS = [
     [142, 149, 244],  // periwinkle
     [255, 111, 97],   // coral
@@ -15,7 +15,15 @@ let holly;              // player object
 
 const PLAYER_SPEED = 4;
 
+// animations
 let hollyIdleFrames = [];
+
+// bedroom furniture
+let bedImg;
+
+
+
+
 
 
 function spawnConfetti(count = 20) {
@@ -25,8 +33,12 @@ function spawnConfetti(count = 20) {
 }
 
 function preload() {
-    hollyBreatheFrames = loadFrameSequence("assets/Holly/Breathe/Breathe-0", 4);
+    // holly animations
+    hollyBreatheFrames = loadFrameSequence("assets/Holly/Breathe/Breathe-0", 5);
     hollyWalkFrames = loadFrameSequence("assets/Holly/Walk/Walk-0", 6);
+
+    // bedroom furniture
+    bedImg = loadImage("assets/Bedroom/Bed.png");
   }
   
   function loadFrameSequence(prefix, count) {
@@ -89,30 +101,86 @@ function setup() {
   }
 
   function drawWorld(idx) {
-    // Slight variation per "screen" so it feels like progression
-    const base = [142, 149, 244]; // periwinkle base
-    const shift = ((idx % 4) + 4) % 4; // 0..3 even for negatives
+    if (idx === 0) {
+      drawBedroom();
+    } else {
+      drawGenericWorld(idx);
+    }
+  }
+
+  function drawGenericWorld(idx) {
+    const base = [142, 149, 244];
+    const shift = ((idx % 4) + 4) % 4;
   
-    background(base[0] - shift * 6, base[1] - shift * 3, base[2] + shift * 4);
+    background(
+      base[0] - shift * 6,
+      base[1] - shift * 3,
+      base[2] + shift * 4
+    );
   
     // Ground
     noStroke();
     fill(255, 255, 255, 90);
     rect(0, height * 0.75, width, height * 0.25);
   
-    // temp items
-    fill(255, 111, 97, 180); // coral
-    rect(width * (0.12 + shift * 0.07), height * 0.58, 80, 140, 18);
-  
-    fill(255, 224, 102, 180); // yellow
-    circle(width * (0.78 - shift * 0.03), height * 0.58, 90);
-  
-    // Screen label 
     fill(255, 255, 255, 160);
     textAlign(CENTER, TOP);
     textSize(18);
     text(`Screen ${idx}`, width / 2, 16);
   }
+
+  
+  function drawBedroom() {
+    // Background wall
+    background(142, 149, 244); // periwinkle
+  
+    // Floor
+    noStroke();
+    fill(255, 255, 255, 90);
+    rect(0, height * 0.75, width, height * 0.25);
+  
+    // --- WINDOW ---
+    drawWindow(width * 0.7, height * 0.25, 160, 140);
+
+    //Bed 
+    const aspect = bedImg.height / bedImg.width;
+  const targetHeight = 520 * aspect;
+
+  imageMode(CENTER);
+  image(bedImg, width * 0.18, height * 0.68, 420, targetHeight);
+  
+   
+  
+    // Screen label (temporary)
+    fill(255, 255, 255, 160);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    text("Holly's Bedroom", width / 2, 16);
+  }
+  
+
+  function drawWindow(x, y, w, h) {
+  push();
+  translate(x, y);
+
+  // frame
+  fill(255, 255, 255, 200);
+  rect(-w / 2, -h / 2, w, h, 12);
+
+  // sky
+  fill(180, 200, 255);
+  rect(-w / 2 + 8, -h / 2 + 8, w - 16, h - 16, 8);
+
+  // cross bars
+  stroke(255);
+  strokeWeight(3);
+  line(0, -h / 2 + 8, 0, h / 2 - 8);
+  line(-w / 2 + 8, 0, w / 2 - 8, 0);
+
+  pop();
+}
+
+  
   
   function handleWorldTransitions() {
     // Walk off right edge => next screen
@@ -133,7 +201,7 @@ function setup() {
     textAlign(LEFT, TOP);
     textSize(16);
     text("Move: ← → or A / D", 16, 16);
-    text(`Candles: ${candlesCollected}/22`, 16, 38);
+    // later: text(`Candles: ${candlesCollected}/22`, 16, 38);
   }
     
 
@@ -193,7 +261,7 @@ function setup() {
         imageMode(CENTER);
         
         // scale 
-        const targetH = 420;
+        const targetH = 670;
         const targetW = targetH * (img.width / img.height);
         
         image(img, 0, 0, targetW, targetH);
