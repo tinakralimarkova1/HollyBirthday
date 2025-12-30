@@ -15,6 +15,8 @@ let holly;              // player object
 
 const PLAYER_SPEED = 4;
 
+let hollyIdleFrames = [];
+
 
 function spawnConfetti(count = 20) {
   for (let i = 0; i < count; i++) {
@@ -22,6 +24,19 @@ function spawnConfetti(count = 20) {
   }
 }
 
+function preload() {
+    hollyBreatheFrames = loadFrameSequence("assets/Holly/Breathe/Breathe-0", 4);
+    hollyWalkFrames = loadFrameSequence("assets/Holly/Walk/Walk-0", 6);
+  }
+  
+  function loadFrameSequence(prefix, count) {
+    const frames = [];
+    for (let i = 1; i < count; i++) {
+      frames.push(loadImage(`${prefix}${i}.png`));
+    }
+    return frames;
+  }
+  
 
 
 function setup() {
@@ -118,58 +133,72 @@ function setup() {
     textAlign(LEFT, TOP);
     textSize(16);
     text("Move: ← → or A / D", 16, 16);
-    // later: text(`Candles: ${candlesCollected}/22`, 16, 38);
+    text(`Candles: ${candlesCollected}/22`, 16, 38);
   }
     
 
 
   class Player {
     constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.w = 50;
-      this.h = 70;
+        this.x = x;
+        this.y = y;
+        this.w = 50;
+        this.h = 70;
+        this.animTime = 0;
+        this.animFPS = 5;
+        this.facing = 1;      // 1 = right, -1 = left
+        this.isWalking = false;
+
     }
   
     update() {
-      let dx = 0;
-      let dy = 0;
-  
-      // arrow keys or A/D
-      if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) dx -= 1;
-      if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) dx += 1;
-  
-      //arrow keys or W/S
-      if (keyIsDown(UP_ARROW) || keyIsDown(87)) dy -= 1;
-      if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) dy += 1;
+        let dx = 0;
+        let dy = 0;
+    
+        // arrow keys or A/D
+        if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) dx -= 1;
+        if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) dx += 1;
+    
+        //arrow keys or W/S
+        if (keyIsDown(UP_ARROW) || keyIsDown(87)) dy -= 1;
+        if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) dy += 1;
 
-      this.x += dx * PLAYER_SPEED;
-  
-      // keep on ground, fix later 
-      this.y = height * 0.68;
+        this.x += dx * PLAYER_SPEED;
+    
+        // keep on ground, fix later? 
+        this.y = height * 0.68;
+
+        this.isWalking = dx !== 0;
+        if (dx < 0) this.facing = -1;
+        if (dx > 0) this.facing = 1;
+
+        this.animTime += deltaTime / 1000;
+
     }
   
 
-    // temp holly
+    // holly animations 
     draw() {
-      push();
-      translate(this.x, this.y);
-  
-      // body
-      noStroke();
-      fill(255, 255, 255, 220);
-      rectMode(CENTER);
-      rect(0, 20, 34, 44, 16);
-  
-      // head
-      fill(255, 245, 230);
-      circle(0, -10, 42);
-  
-      // hair
-      fill(58, 63, 159, 220);
-      arc(0, -14, 46, 46, PI, TWO_PI);
-  
-      pop();
+        const frames = this.isWalking ? hollyWalkFrames : hollyBreatheFrames;
+        const frameIndex =
+          Math.floor(this.animTime * this.animFPS) % frames.length;
+        const img = frames[frameIndex];
+        
+        push();
+        translate(this.x, this.y);
+        
+        // left
+        if (this.facing === -1) scale(-1, 1);
+        
+        imageMode(CENTER);
+        
+        // scale 
+        const targetH = 420;
+        const targetW = targetH * (img.width / img.height);
+        
+        image(img, 0, 0, targetW, targetH);
+        pop();
+        
     }
   }
   
