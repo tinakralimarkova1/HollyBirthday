@@ -37,7 +37,15 @@ let rugImg;
 let BookshelfImg;
 let mavImg;
 
-
+//mav state
+let mav = {
+    screen: 0,
+    x: () => width * 0.23,
+    y: () => height * 0.6,
+    moved: false,
+    offsetX: 0 // how far mav slides
+  };
+  
 
 
 
@@ -194,11 +202,13 @@ function setup() {
     
     pop();
 
-    //mav
+    // mav
     push();
     imageMode(CENTER);
-    scale(1,1);
-    translate(width * 0.23, height * 0.6);
+    translate(
+    mav.x() + mav.offsetX,
+    mav.y()
+    );
     image(mavImg, 0, 0, width * 0.2, height * 0.3);
     pop();
 
@@ -226,6 +236,14 @@ function setup() {
     image(BookshelfImg, 0, 0, width * 0.3, height * 0.25);
     pop();
   
+    //mav interaction 
+    if (!mav.moved && isPlayerNearPoint(mav.x(), mav.y(), 80)) {
+        fill(255, 255, 255, 220);
+        textAlign(CENTER, BOTTOM);
+        textSize(14);
+        text("Press E", mav.x(), mav.y() - 40);
+      }
+      
    
   
     // Screen label (temporary)
@@ -256,6 +274,7 @@ function setup() {
 
   pop();
 }
+
 
   
   
@@ -359,30 +378,40 @@ function setup() {
   
       // Screen 1 
       { id: 4, screen: 1, x: () => width * 0.50, y: () => height * 0.62, collected: false },
+
+      // candle behind Mav (locked)
+    {
+        id: 99,
+        screen: 0,
+        x: () => width * 0.23,
+        y: () => height * 0.62,
+        collected: false,
+        unlocked: false
+      }
     ];
   
     
   }
 
+  
   function drawCandles(screenIdx) {
     if (!candleImg) return;
   
     for (const c of candles) {
-      if (c.collected) continue;
+      const unlocked = (c.unlocked === undefined) ? true : c.unlocked;
+  
+      if (c.collected || !unlocked) continue;
       if (c.screen !== screenIdx) continue;
   
       const cx = c.x();
       const cy = c.y();
   
-      // Candle size (tweak)
       const w = 150;
       const h = 150;
   
-      // Draw candle
       imageMode(CENTER);
       image(candleImg, cx, cy, w, h);
   
-      // glow if player is near
       if (isPlayerNearPoint(cx, cy, 70)) {
         noFill();
         stroke(255, 255, 255, 160);
@@ -390,7 +419,6 @@ function setup() {
         circle(cx, cy, 70);
         noStroke();
   
-        // Prompt
         fill(255, 255, 255, 220);
         textAlign(CENTER, BOTTOM);
         textSize(14);
@@ -398,6 +426,7 @@ function setup() {
       }
     }
   }
+  
   
   function tryCollectCandles(screenIdx) {
     if (!interactPressed) return;
@@ -433,7 +462,10 @@ function setup() {
   function keyPressed() {
     // E key
     if (key === "e" || key === "E") {
-      interactPressed = true;
+      tryInteractWithMav();
+    }
+    if (key === "c" || key === "C") {
+        interactPressed = true;
     }
   }
 
@@ -512,5 +544,29 @@ function setup() {
       return this.y > height + 20;
     }
   }
+
+  function tryInteractWithMav() {
+    if (mav.moved) return;
+    if (worldIndex !== mav.screen) return;
+  
+    const mx = mav.x();
+    const my = mav.y();
+  
+    if (isPlayerNearPoint(mx, my, 80)) {
+      mav.moved = true;
+  
+      // slide mav to the right
+      mav.offsetX = 120;
+  
+      // unlock candle behind mav
+      const hiddenCandle = candles.find(c => c.id === 99);
+      if (hiddenCandle) {
+        hiddenCandle.unlocked = true;
+      }
+  
+      spawnConfetti(25);
+    }
+  }
+  
   
   
