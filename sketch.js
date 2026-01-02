@@ -33,6 +33,9 @@ let hollyIdleFrames = [];
 let bedImg;
 let lampImg;
 let DeskImg;
+let rugImg;
+let BookshelfImg;
+let mavImg;
 
 
 
@@ -54,6 +57,10 @@ function preload() {
     bedImg = loadImage("assets/Bedroom/Bed.png");
     lampImg = loadImage("assets/Bedroom/lamp.png");
     DeskImg = loadImage("assets/Bedroom/Desk3.png");
+    rugImg = loadImage("assets/Bedroom/Rug.png");
+    BookshelfImg = loadImage("assets/Bedroom/Bookshelf.png");
+    mavImg = loadImage("assets/Bedroom/mav.png");
+
 
     // candles
     candleImg = loadImage("assets/General/Candle.png");
@@ -165,17 +172,33 @@ function setup() {
     noStroke();
     fill(255, 255, 255, 90);
     rect(0, height * 0.75, width, height * 0.25);
-  
-    // --- WINDOW ---
-    drawWindow(width /4.2, height /2.2, 460, 300);
 
     push();
     imageMode(CENTER);
+    scale(1,1.7);
+    translate(width * 0.5, height * 0.5);
+    image(rugImg, 0, 0, width * 0.8, height * 0.5);
+    pop();
+  
+    // window
+    drawWindow(width /4.2, height /2.2, 460, 300);
+
+    // bed
+    push();
+    imageMode(CENTER);
     
-    translate(width * 0.18, height * 0.68);
+    translate(width * 0.19, height * 0.68);
     scale(-1, 1);
-    image(bedImg, 0, 0, width * 0.37, height * 0.85);
+    image(bedImg, 0, 0, width * 0.4, height * 0.87);
     
+    pop();
+
+    //mav
+    push();
+    imageMode(CENTER);
+    scale(1,1);
+    translate(width * 0.23, height * 0.6);
+    image(mavImg, 0, 0, width * 0.2, height * 0.3);
     pop();
 
     //lamp
@@ -191,7 +214,15 @@ function setup() {
     imageMode(CENTER);
     scale(1,1.7);
     translate(width * 0.8, height * 0.39);
-    image(DeskImg, 0, 0, width * 0.25, height * 0.2);
+    image(DeskImg, 0, 0, width * 0.3, height * 0.25);
+    pop();
+
+    //bookshelf
+    push();
+    imageMode(CENTER);
+    scale(1,1);
+    translate(width * 0.6, height * 0.39);
+    image(BookshelfImg, 0, 0, width * 0.3, height * 0.25);
     pop();
   
    
@@ -320,7 +351,7 @@ function setup() {
 // candle functions
   function initCandles() {
     candles = [
-      // bedroom
+      // bedroom 
       { id: 1, screen: 0, x: () => width * 0.32, y: () => height * 0.62, collected: false }, 
       { id: 2, screen: 0, x: () => width * 0.72, y: () => height * 0.62, collected: false }, 
       { id: 3, screen: 0, x: () => width * 0.55, y: () => height * 0.62, collected: false },
@@ -406,10 +437,9 @@ function setup() {
   }
 
   function drawCandleHUD() {
-    textAlign(CENTER);
-    textSize(20);
-    fill(255);
-    text(candlesCollected, width * 0.55, height * 0.15);
+    // Draw candles collected
+    
+    
   }
   
   
