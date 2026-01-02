@@ -284,7 +284,7 @@ function setup() {
         fill(255, 255, 255, 220);
         textAlign(CENTER, BOTTOM);
         textSize(14);
-        text("Press E", desk.x(), desk.y() - 260);
+        text("Press E", desk.x(), desk.y() - 200);
       }
       
       
@@ -314,13 +314,9 @@ function setup() {
     }
   
     // label
-    fill(255, 255, 255, 220);
-    textAlign(LEFT, TOP);
-    textSize(18);
-    text("Excel Wizard", 20, 20);
-  
-    textSize(14);
-    text("Press ESC to return", 20, 48);
+    
+    textSize(12);
+    text("Press Q to return", 20, 20);
   
     // OPTIONAL: candle on this screen (you'll position it later)
     drawCandles(COMPUTER_SCREEN_INDEX);
@@ -460,8 +456,8 @@ function setup() {
     {
         id: 100,
         screen: COMPUTER_SCREEN_INDEX,
-        x: () => width * 0.75,
-        y: () => height * 0.6,
+        x: () => width * 0.5,
+        y: () => height * 0.7,
         collected: false,
         unlocked: true
       }
@@ -525,6 +521,12 @@ function setup() {
   
         break; // collect only one per press
       }
+      if (mode === "computer") {
+        
+        c.collected = true;
+        candlesCollected += 1;
+        break;
+      }
     }
   
     interactPressed = false; // consume the press
@@ -546,7 +548,7 @@ function setup() {
     }
   
     // leave computer screen
-    if (keyCode === ESCAPE && mode === "computer") {
+    if ((key === "q" || key === "Q") && mode === "computer") {
       mode = "game";
       worldIndex = returnWorldIndex;
     }
