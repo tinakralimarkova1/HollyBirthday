@@ -15,11 +15,24 @@ let holly;              // player object
 
 const PLAYER_SPEED = 4;
 
+
+//candles 
+const TOTAL_CANDLES = 22;
+
+let candleImg;
+let candles = [];           // array of candle objects
+let candlesCollected = 0;
+
+let interactPressed = false; // set true when E is pressed
+
+
 // animations
 let hollyIdleFrames = [];
 
 // bedroom furniture
 let bedImg;
+let lampImg;
+let DeskImg;
 
 
 
@@ -39,6 +52,14 @@ function preload() {
 
     // bedroom furniture
     bedImg = loadImage("assets/Bedroom/Bed.png");
+    lampImg = loadImage("assets/Bedroom/lamp.png");
+    DeskImg = loadImage("assets/Bedroom/Desk3.png");
+
+    // candles
+    candleImg = loadImage("assets/General/Candle.png");
+
+
+
   }
   
   function loadFrameSequence(prefix, count) {
@@ -55,6 +76,8 @@ function setup() {
     createCanvas(windowWidth, windowHeight);
     spawnConfetti(40);
     holly = new Player(width / 2, height * 0.68);
+    initCandles();
+
 
   }
 
@@ -92,12 +115,16 @@ function setup() {
 
   function drawGame() {
     drawWorld(worldIndex);
+    drawCandles(worldIndex);
   
     holly.update();
     holly.draw();
+
+    tryCollectCandles(worldIndex);
   
     handleWorldTransitions();
     drawHUD();
+    drawCandleHUD();  
   }
 
   function drawWorld(idx) {
@@ -140,14 +167,32 @@ function setup() {
     rect(0, height * 0.75, width, height * 0.25);
   
     // --- WINDOW ---
-    drawWindow(width * 0.7, height * 0.25, 160, 140);
+    drawWindow(width /4.2, height /2.2, 460, 300);
 
-    //Bed 
-    const aspect = bedImg.height / bedImg.width;
-  const targetHeight = 520 * aspect;
+    push();
+    imageMode(CENTER);
+    
+    translate(width * 0.18, height * 0.68);
+    scale(-1, 1);
+    image(bedImg, 0, 0, width * 0.37, height * 0.85);
+    
+    pop();
 
-  imageMode(CENTER);
-  image(bedImg, width * 0.18, height * 0.68, 420, targetHeight);
+    //lamp
+    push();
+    imageMode(CENTER);
+    scale(1,1.3);
+    translate(width * 0.5, 70);
+    image(lampImg, 0, 0, width * 0.2, height * 0.2);
+    pop();
+
+    //desk
+    push();
+    imageMode(CENTER);
+    scale(1,1.7);
+    translate(width * 0.8, height * 0.39);
+    image(DeskImg, 0, 0, width * 0.25, height * 0.2);
+    pop();
   
    
   
@@ -173,7 +218,7 @@ function setup() {
 
   // cross bars
   stroke(255);
-  strokeWeight(3);
+  strokeWeight(7);
   line(0, -h / 2 + 8, 0, h / 2 - 8);
   line(-w / 2 + 8, 0, w / 2 - 8, 0);
 
@@ -272,7 +317,103 @@ function setup() {
   
 
   
+// candle functions
+  function initCandles() {
+    candles = [
+      // bedroom
+      { id: 1, screen: 0, x: () => width * 0.32, y: () => height * 0.62, collected: false }, 
+      { id: 2, screen: 0, x: () => width * 0.72, y: () => height * 0.62, collected: false }, 
+      { id: 3, screen: 0, x: () => width * 0.55, y: () => height * 0.62, collected: false },
+  
+      // Screen 1 
+      { id: 4, screen: 1, x: () => width * 0.50, y: () => height * 0.62, collected: false },
+    ];
+  
+    
+  }
 
+  function drawCandles(screenIdx) {
+    if (!candleImg) return;
+  
+    for (const c of candles) {
+      if (c.collected) continue;
+      if (c.screen !== screenIdx) continue;
+  
+      const cx = c.x();
+      const cy = c.y();
+  
+      // Candle size (tweak)
+      const w = 150;
+      const h = 150;
+  
+      // Draw candle
+      imageMode(CENTER);
+      image(candleImg, cx, cy, w, h);
+  
+      // glow if player is near
+      if (isPlayerNearPoint(cx, cy, 70)) {
+        noFill();
+        stroke(255, 255, 255, 160);
+        strokeWeight(3);
+        circle(cx, cy, 70);
+        noStroke();
+  
+        // Prompt
+        fill(255, 255, 255, 220);
+        textAlign(CENTER, BOTTOM);
+        textSize(14);
+        text("Press E", cx, cy - 30);
+      }
+    }
+  }
+  
+  function tryCollectCandles(screenIdx) {
+    if (!interactPressed) return;
+  
+    for (const c of candles) {
+      if (c.collected) continue;
+      if (c.screen !== screenIdx) continue;
+  
+      const cx = c.x();
+      const cy = c.y();
+  
+      if (isPlayerNearPoint(cx, cy, 70)) {
+        c.collected = true;
+        candlesCollected += 1;
+  
+       //celebrate?
+        spawnConfetti(20);
+  
+        break; // collect only one per press
+      }
+    }
+  
+    interactPressed = false; // consume the press
+  }
+  
+  function isPlayerNearPoint(px, py, radius) {
+    // adjust holly's y anchor if needed
+    const hx = holly.x;
+    const hy = holly.y;
+    return dist(hx, hy, px, py) < radius;
+  }
+
+  function keyPressed() {
+    // E key
+    if (key === "e" || key === "E") {
+      interactPressed = true;
+    }
+  }
+
+  function drawCandleHUD() {
+    textAlign(CENTER);
+    textSize(20);
+    fill(255);
+    text(candlesCollected, width * 0.55, height * 0.15);
+  }
+  
+  
+  
   class Confetti {
     constructor(x, y) {
       this.x = x;
