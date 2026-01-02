@@ -19,10 +19,14 @@ let holly;              // player object
 
 let mode = "game";          // "landing" | "game" | "computer"
 
-const COMPUTER_SCREEN_INDEX = 999; // unique id so it won't collide
-
-// desk interaction
+const COMPUTER_SCREEN_INDEX = 101; // unique id so it won't collide
 const DESK_INTERACT_RADIUS = 180;  // tweak as needed
+
+const BOOKSHELF_SCREEN_INDEX = 102;   // unique id
+const BOOKSHELF_INTERACT_RADIUS = 180; // tweak
+
+
+
 
 const PLAYER_SPEED = 8;
 
@@ -65,6 +69,13 @@ let desk = {
     screen: 0,
     x: () => width * 0.8,
     y: () => height * 0.65
+  };
+  
+// bookshelf state
+let bookshelf = {
+    screen: 0,
+    x: () => width * 0.7,
+    y: () => height * 0.69
   };
   
   
@@ -133,6 +144,11 @@ function setup() {
       drawComputerScreen();
       return;
     }
+    if (mode === "bookshelf") {
+        drawBookshelfScreen();
+        return;
+      }
+    
   
     drawGame();
   }
@@ -254,7 +270,6 @@ function setup() {
     pop();
 
     //desk
-    // desk (FIXED: no scaled coordinate system)
     push();
     imageMode(CENTER);
     const deskX = width * 0.8;
@@ -274,17 +289,23 @@ function setup() {
   
     //mav interaction 
     if (!mav.moved && isPlayerNearPoint(mav.x(), mav.y(), 200)) {
-        fill(230,20,20);
+        fill(230,60,60);
         textAlign(CENTER,BOTTOM);
         textSize(14);
         text("Press E", mav.x()+15, mav.y() - 100);
       }
 
     if (isPlayerNearPoint(desk.x(), desk.y(), DESK_INTERACT_RADIUS)) {
-        fill(255, 255, 255, 220);
+        fill(230,60,60);
         textAlign(CENTER, BOTTOM);
-        textSize(14);
+        textSize(18);
         text("Press E", desk.x(), desk.y() - 200);
+      }
+    if (isPlayerNearPoint(bookshelf.x(), bookshelf.y(), BOOKSHELF_INTERACT_RADIUS)) {
+        fill(230,60,60);
+        textAlign(CENTER, BOTTOM);
+        textSize(18);
+        text("Press E", bookshelf.x() -160, bookshelf.y() - 370);
       }
       
       
@@ -300,7 +321,6 @@ function setup() {
   function drawComputerScreen() {
     background(142, 149, 244);
   
-    // show screenshot if available, otherwise placeholder
     if (excelImg) {
         imageMode(CENTER);
         const w = width * 0.9;
@@ -316,11 +336,27 @@ function setup() {
     // label
     
     textSize(12);
+    fill(255, 255, 255, 160);
     text("Press Q to return", 20, 20);
   
-    // OPTIONAL: candle on this screen (you'll position it later)
     drawCandles(COMPUTER_SCREEN_INDEX);
     tryCollectCandles(COMPUTER_SCREEN_INDEX);
+  }
+
+  function drawBookshelfScreen() {
+    background(142, 149, 244);
+  
+    // Placeholder UI (swap for your real bookshelf UI later)
+    fill(255, 255, 255, 220);
+    textAlign(CENTER, CENTER);
+    textSize(36);
+    text("Bookshelf", width / 2, height / 2 - 20);
+  
+    textSize(16);
+    text("Press Q to return", width / 2, height / 2 + 30);
+  
+    drawCandles(BOOKSHELF_SCREEN_INDEX);
+    tryCollectCandles(BOOKSHELF_SCREEN_INDEX);
   }
   
   
@@ -454,13 +490,22 @@ function setup() {
         unlocked: false
       },
     {
-        id: 100,
+        id: 101,
         screen: COMPUTER_SCREEN_INDEX,
         x: () => width * 0.5,
         y: () => height * 0.7,
         collected: false,
         unlocked: true
+      },
+      {
+        id: 101,
+        screen: BOOKSHELF_SCREEN_INDEX,
+        x: () => width * 0.5,
+        y: () => height * 0.7,
+        collected: false,
+        unlocked: true
       }
+      
       
     ];
   
@@ -487,16 +532,12 @@ function setup() {
       image(candleImg, cx, cy, w, h);
   
       if (isPlayerNearPoint(cx, cy, 150)) {
-        noFill();
-        stroke(255, 255, 255, 100);
-        strokeWeight(3);
-        circle(cx, cy, 70);
-        noStroke();
+        
   
-        fill(255, 255, 255, 220);
+        fill(230, 20, 20, 200);
         textAlign(CENTER, BOTTOM);
         textSize(14);
-        text("Press C", cx, cy - 40);
+        text("Press C", cx, cy - 60);
       }
     }
   }
@@ -522,6 +563,14 @@ function setup() {
         break; // collect only one per press
       }
       if (mode === "computer") {
+        // collect computer screen candle
+        
+        c.collected = true;
+        candlesCollected += 1;
+        break;
+      }
+      if (mode === "bookshelf") {
+        // collect bookshelf screen candle
         
         c.collected = true;
         candlesCollected += 1;
@@ -533,7 +582,7 @@ function setup() {
   }
   
   function isPlayerNearPoint(px, py, radius) {
-    // adjust holly's y anchor if needed
+   
     const hx = holly.x ;
     const hy = holly.y;
     return dist(hx, hy, px, py) < radius;
@@ -541,27 +590,28 @@ function setup() {
 
   function keyPressed() {
     if (key === "e" || key === "E") {
-      tryInteract(); // NEW: handles mav + desk
+      tryInteract(); 
     }
     if (key === "c" || key === "C") {
-      interactPressed = true; // your candle collect key
+      interactPressed = true; 
     }
   
-    // leave computer screen
-    if ((key === "q" || key === "Q") && mode === "computer") {
-      mode = "game";
-      worldIndex = returnWorldIndex;
-    }
+    // leave extra screen
+    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf")) {
+        mode = "game";
+        worldIndex = returnWorldIndex;
+      }
+      
   }
 
   function tryInteract() {
-    // only allow interactions in normal gameplay
     if (mode !== "game") return;
   
-    // check desk first (or mav first—your choice)
     if (tryInteractWithDesk()) return;
+    if (tryInteractWithBookshelf()) return;
     if (tryInteractWithMav()) return;
   }
+  
   
   
 
@@ -679,6 +729,24 @@ function setup() {
   
     return false;
   }
+
+  function tryInteractWithBookshelf() {
+    if (worldIndex !== bookshelf.screen) return false;
+  
+    const bx = bookshelf.x();
+    const by = bookshelf.y();
+  
+    if (isPlayerNearPoint(bx, by, BOOKSHELF_INTERACT_RADIUS)) {
+      returnWorldIndex = worldIndex;
+      mode = "bookshelf";
+      worldIndex = BOOKSHELF_SCREEN_INDEX; // optional but consistent
+      spawnConfetti(10);
+      return true;
+    }
+  
+    return false;
+  }
+  
   
   
   
