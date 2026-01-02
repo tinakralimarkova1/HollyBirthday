@@ -54,6 +54,7 @@ let BookshelfImg;
 let mavImg;
 
 let excelImg;
+let booksImg;
 
 //mav state
 let mav = {
@@ -105,6 +106,7 @@ function preload() {
     mavImg = loadImage("assets/Bedroom/mav.png");
 
     excelImg = loadImage("assets/General/Excel.png");
+    booksImg = loadImage("assets/Bedroom/books.png");
 
 
     // candles
@@ -347,13 +349,15 @@ function setup() {
     background(142, 149, 244);
   
     // Placeholder UI (swap for your real bookshelf UI later)
-    fill(255, 255, 255, 220);
-    textAlign(CENTER, CENTER);
-    textSize(36);
-    text("Bookshelf", width / 2, height / 2 - 20);
+    imageMode(CENTER);
+    const w = width * 0.9;
+    const h = height * 0.9;
+    image(booksImg, width / 2, height / 2, w, h);
   
-    textSize(16);
-    text("Press Q to return", width / 2, height / 2 + 30);
+    // label
+    textSize(12);
+    fill(255, 255, 255, 160);
+    text("Press Q to return", 20, 20);
   
     drawCandles(BOOKSHELF_SCREEN_INDEX);
     tryCollectCandles(BOOKSHELF_SCREEN_INDEX);
@@ -500,10 +504,11 @@ function setup() {
       {
         id: 101,
         screen: BOOKSHELF_SCREEN_INDEX,
-        x: () => width * 0.5,
-        y: () => height * 0.7,
+        x: () => width * 0.31,
+        y: () => height * 0.55,
         collected: false,
-        unlocked: true
+        unlocked: true,
+        scale:2.2
       }
       
       
@@ -525,9 +530,11 @@ function setup() {
       const cx = c.x();
       const cy = c.y();
   
-      const w = 150;
-      const h = 150;
-  
+      const baseSize = 150;
+      const scale = c.scale ?? 1;   // default = 1
+      const w = baseSize * scale;
+      const h = baseSize * scale;
+
       imageMode(CENTER);
       image(candleImg, cx, cy, w, h);
   
