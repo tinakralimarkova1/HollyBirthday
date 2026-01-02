@@ -10,10 +10,22 @@ const CONFETTI_COLORS = [
 let confetti = [];
 const CONFETTI_RATE = 3;
 
+//world mechanics
+
 let worldIndex = 0;     // which screen
+let returnWorldIndex = 0;
+
 let holly;              // player object
 
+let mode = "game";          // "landing" | "game" | "computer"
+
+const COMPUTER_SCREEN_INDEX = 999; // unique id so it won't collide
+
+// desk interaction
+const DESK_INTERACT_RADIUS = 180;  // tweak as needed
+
 const PLAYER_SPEED = 8;
+
 
 
 //candles 
@@ -37,6 +49,8 @@ let rugImg;
 let BookshelfImg;
 let mavImg;
 
+let excelImg;
+
 //mav state
 let mav = {
     screen: 0,
@@ -45,7 +59,17 @@ let mav = {
     moved: false,
     offsetX: 0 // how far mav slides
   };
+
+// desk state
+let desk = {
+    screen: 0,
+    x: () => width * 0.8,
+    y: () => height * 0.65
+  };
   
+  
+
+
 
 
 
@@ -68,6 +92,8 @@ function preload() {
     rugImg = loadImage("assets/Bedroom/Rug.png");
     BookshelfImg = loadImage("assets/Bedroom/Bookshelf.png");
     mavImg = loadImage("assets/Bedroom/mav.png");
+
+    excelImg = loadImage("assets/General/Excel.png");
 
 
     // candles
@@ -100,10 +126,17 @@ function setup() {
   function draw() {
     if (!isGameStarted()) {
       drawLanding();
-    } else {
-      drawGame();
+      return;
     }
+  
+    if (mode === "computer") {
+      drawComputerScreen();
+      return;
+    }
+  
+    drawGame();
   }
+  
   
   
   
@@ -221,12 +254,15 @@ function setup() {
     pop();
 
     //desk
+    // desk (FIXED: no scaled coordinate system)
     push();
     imageMode(CENTER);
-    scale(1,1.7);
-    translate(width * 0.8, height * 0.39);
-    image(DeskImg, 0, 0, width * 0.3, height * 0.25);
+    const deskX = width * 0.8;
+    const deskY = height * 0.65;
+
+    image(DeskImg, deskX, deskY, width * 0.3, height * 0.25 * 1.7);
     pop();
+
 
     //bookshelf
     push();
@@ -243,6 +279,14 @@ function setup() {
         textSize(14);
         text("Press E", mav.x()+15, mav.y() - 100);
       }
+
+    if (isPlayerNearPoint(desk.x(), desk.y(), DESK_INTERACT_RADIUS)) {
+        fill(255, 255, 255, 220);
+        textAlign(CENTER, BOTTOM);
+        textSize(14);
+        text("Press E", desk.x(), desk.y() - 260);
+      }
+      
       
    
   
@@ -252,6 +296,37 @@ function setup() {
     textSize(18);
     text("Holly's Bedroom", width / 2, 16);
   }
+
+  function drawComputerScreen() {
+    background(142, 149, 244);
+  
+    // show screenshot if available, otherwise placeholder
+    if (excelImg) {
+        imageMode(CENTER);
+        const w = width * 0.9;
+        const h = height * 0.9;
+        image(excelImg, width / 2, height / 2, w, h);
+    }else {
+      fill(255);
+      textAlign(CENTER, CENTER);
+      textSize(32);
+      text("Excel Wizard", width / 2, height / 2);
+    }
+  
+    // label
+    fill(255, 255, 255, 220);
+    textAlign(LEFT, TOP);
+    textSize(18);
+    text("Excel Wizard", 20, 20);
+  
+    textSize(14);
+    text("Press ESC to return", 20, 48);
+  
+    // OPTIONAL: candle on this screen (you'll position it later)
+    drawCandles(COMPUTER_SCREEN_INDEX);
+    tryCollectCandles(COMPUTER_SCREEN_INDEX);
+  }
+  
   
 
   function drawWindow(x, y, w, h) {
@@ -381,7 +456,16 @@ function setup() {
         y: () => height * 0.62,
         collected: false,
         unlocked: false
+      },
+    {
+        id: 100,
+        screen: COMPUTER_SCREEN_INDEX,
+        x: () => width * 0.75,
+        y: () => height * 0.6,
+        collected: false,
+        unlocked: true
       }
+      
     ];
   
     
@@ -454,14 +538,30 @@ function setup() {
   }
 
   function keyPressed() {
-    // E key
     if (key === "e" || key === "E") {
-      tryInteractWithMav();
+      tryInteract(); // NEW: handles mav + desk
     }
     if (key === "c" || key === "C") {
-        interactPressed = true;
+      interactPressed = true; // your candle collect key
+    }
+  
+    // leave computer screen
+    if (keyCode === ESCAPE && mode === "computer") {
+      mode = "game";
+      worldIndex = returnWorldIndex;
     }
   }
+
+  function tryInteract() {
+    // only allow interactions in normal gameplay
+    if (mode !== "game") return;
+  
+    // check desk first (or mav first—your choice)
+    if (tryInteractWithDesk()) return;
+    if (tryInteractWithMav()) return;
+  }
+  
+  
 
   function drawCandleHUD() {
     if (!candleImg) return;
@@ -540,27 +640,44 @@ function setup() {
   }
 
   function tryInteractWithMav() {
-    if (mav.moved) return;
-    if (worldIndex !== mav.screen) return;
+    if (mav.moved) return false;
+    if (worldIndex !== mav.screen) return false;
   
     const mx = mav.x();
     const my = mav.y();
   
     if (isPlayerNearPoint(mx, my, 200)) {
       mav.moved = true;
-  
-      // slide mav to the right
       mav.offsetX = 120;
   
-      // unlock candle behind mav
       const hiddenCandle = candles.find(c => c.id === 99);
-      if (hiddenCandle) {
-        hiddenCandle.unlocked = true;
-      }
+      if (hiddenCandle) hiddenCandle.unlocked = true;
   
       spawnConfetti(25);
+      return true;
     }
+  
+    return false;
   }
+  
+
+  function tryInteractWithDesk() {
+    if (worldIndex !== desk.screen) return false;
+  
+    const dx = desk.x();
+    const dy = desk.y();
+  
+    if (isPlayerNearPoint(dx, dy, DESK_INTERACT_RADIUS)) {
+      returnWorldIndex = worldIndex;
+      mode = "computer";
+      worldIndex = COMPUTER_SCREEN_INDEX; // optional, but useful if you want candles tied to screen
+      spawnConfetti(15);
+      return true;
+    }
+  
+    return false;
+  }
+  
   
   
   
