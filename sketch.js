@@ -237,11 +237,11 @@ function setup() {
     pop();
   
     //mav interaction 
-    if (!mav.moved && isPlayerNearPoint(mav.x(), mav.y(), 80)) {
-        fill(255, 255, 255, 220);
-        textAlign(CENTER, BOTTOM);
+    if (!mav.moved && isPlayerNearPoint(mav.x(), mav.y(), 200)) {
+        fill(230,20,20);
+        textAlign(CENTER,BOTTOM);
         textSize(14);
-        text("Press E", mav.x(), mav.y() - 40);
+        text("Press E", mav.x()+15, mav.y() - 100);
       }
       
    
@@ -372,12 +372,6 @@ function setup() {
   function initCandles() {
     candles = [
       // bedroom 
-      { id: 1, screen: 0, x: () => width * 0.32, y: () => height * 0.62, collected: false }, 
-      { id: 2, screen: 0, x: () => width * 0.72, y: () => height * 0.62, collected: false }, 
-      { id: 3, screen: 0, x: () => width * 0.55, y: () => height * 0.62, collected: false },
-  
-      // Screen 1 
-      { id: 4, screen: 1, x: () => width * 0.50, y: () => height * 0.62, collected: false },
 
       // candle behind Mav (locked)
     {
@@ -412,9 +406,9 @@ function setup() {
       imageMode(CENTER);
       image(candleImg, cx, cy, w, h);
   
-      if (isPlayerNearPoint(cx, cy, 70)) {
+      if (isPlayerNearPoint(cx, cy, 150)) {
         noFill();
-        stroke(255, 255, 255, 160);
+        stroke(255, 255, 255, 100);
         strokeWeight(3);
         circle(cx, cy, 70);
         noStroke();
@@ -422,7 +416,7 @@ function setup() {
         fill(255, 255, 255, 220);
         textAlign(CENTER, BOTTOM);
         textSize(14);
-        text("Press E", cx, cy - 30);
+        text("Press C", cx, cy - 40);
       }
     }
   }
@@ -438,7 +432,7 @@ function setup() {
       const cx = c.x();
       const cy = c.y();
   
-      if (isPlayerNearPoint(cx, cy, 70)) {
+      if (isPlayerNearPoint(cx, cy, 150)) {
         c.collected = true;
         candlesCollected += 1;
   
@@ -454,7 +448,7 @@ function setup() {
   
   function isPlayerNearPoint(px, py, radius) {
     // adjust holly's y anchor if needed
-    const hx = holly.x;
+    const hx = holly.x ;
     const hy = holly.y;
     return dist(hx, hy, px, py) < radius;
   }
@@ -552,7 +546,7 @@ function setup() {
     const mx = mav.x();
     const my = mav.y();
   
-    if (isPlayerNearPoint(mx, my, 80)) {
+    if (isPlayerNearPoint(mx, my, 200)) {
       mav.moved = true;
   
       // slide mav to the right
