@@ -13,7 +13,7 @@ const CONFETTI_RATE = 3;
 let worldIndex = 0;     // which screen
 let holly;              // player object
 
-const PLAYER_SPEED = 4;
+const PLAYER_SPEED = 8;
 
 
 //candles 
@@ -121,6 +121,7 @@ function setup() {
   }
 
   function drawGame() {
+    noCursor();
     drawWorld(worldIndex);
     drawCandles(worldIndex);
   
@@ -437,9 +438,44 @@ function setup() {
   }
 
   function drawCandleHUD() {
-    // Draw candles collected
-    
-    
+    if (!candleImg) return;
+  
+    const margin = 20;       // distance from screen edge
+    const iconW = 60;        // candle size
+    const iconH = 40;
+  
+    const totalWidth =
+      TOTAL_CANDLES * iconW + (TOTAL_CANDLES - 1)- 770 ;
+  
+    const xStart = width - totalWidth - margin;
+    const yStart = margin;
+  
+    // background strip
+    noStroke();
+    fill(255, 255, 255, 70);
+    rect(
+      xStart - 12,
+      yStart - 10,
+      totalWidth + 24,
+      iconH + 20,
+      14
+    );
+  
+    imageMode(CORNER);
+  
+    const collectedCount = candles.filter(c => c.collected).length;
+  
+    for (let i = 0; i < TOTAL_CANDLES; i++) {
+      const x = xStart + i * (iconW - 35);
+      const y = yStart;
+  
+      const alpha = i < collectedCount ? 225 : 60;
+      tint(255, 255, 255, alpha);
+  
+      image(candleImg, x, y, iconW, iconH);
+    }
+  
+    noTint();
   }
   
   
