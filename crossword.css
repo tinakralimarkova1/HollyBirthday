@@ -1,25 +1,37 @@
-body {
+body{
+    white-space: nowrap;
+}
+
+main {
     display: flex;
     flex-wrap: nowrap;
 }
 
+h1 {
+   text-align: center; 
+   margin: 1rem;
+}
+
+#game-options {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
 textarea {
-  width: 32px;  
-  height: 32px; 
+  width: 35px;  
+  height: 35px; 
   box-sizing: border-box; 
   resize: none; 
   overflow: hidden;
   font-size: 20px;
+  max-height: 35px;
+  max-width: 35px;
 }
-
-#puzzle-holder {
-    position: absolute;
-}
-
 
 .cell {
     position: relative; 
     display: inline-block;
+    border-color: black;
 }
 
 .label {
@@ -27,4 +39,21 @@ textarea {
     left: 3px;
     top: 2px;             
     font-size: 10px;
+}
+
+.blackout {
+    background-color: black;
+}
+
+#hint-holder {
+    margin-left: 3rem;
+    margin-top: -1rem;
+}
+
+.correct {
+    background-color: green;
+}
+
+.incorrect {
+    background-color: lightcoral;
 }

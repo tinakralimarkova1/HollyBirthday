@@ -7,9 +7,27 @@
     <title>Crossword</title>
 </head>
 <body>
-    <div id="puzzle-holder">
-
-    </div>
+    <header>
+        <h1>
+            Happy Birthday Crossword!
+        </h1>
+        <div id="game-options">
+            <button onClick="checkAnswers()">Check your Progress</button>
+            <button onClick="removeClasses()">Remove Progress Check</button>
+            <button>Erase Progress + Show Key</button>
+        </div>
+    </header>
+    <main>
+        <div id="puzzle-holder"></div>
+        <div id="hint-holder">
+            <div id="a">
+                <h2>Across</h2>
+            </div> <!--Across-->
+            <div id="d">
+                <h2>Down</h2>
+            </div> <!--Down-->
+        </div>        
+    </main>
 </body>
 <script src="crossword.js"></script>
 </html>
