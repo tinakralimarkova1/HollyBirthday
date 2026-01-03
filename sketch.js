@@ -351,6 +351,10 @@ let ftWinCandleCollected = false;
 const TINA_WISH_CANDLE_ID = 551;
 const KRISTEN_WISH_CANDLE_ID = 552;
 
+// === Crossword (HTML overlay) ===
+let crosswordEnteredAt = null;
+let crosswordShownOnce = false; // optional, if you only want it once
+
 
 
 
@@ -480,6 +484,10 @@ function setup() {
       drawLanding();
       return;
     }
+    if (mode === "crossword") {
+        // nothing to draw — the HTML page is shown via DOM
+        return;
+      }
   
     if (mode === "computer") {
       drawComputerScreen();
@@ -1030,6 +1038,90 @@ function startFindFriendsGame() {
     strokeWeight(3);
     rect(mx, my, size, size, 18);
     noStroke();
+  }
+  
+  function ensureCrosswordFrame() {
+    let frame = document.getElementById("crosswordFrame");
+    if (!frame) {
+      frame = document.createElement("iframe");
+      frame.id = "crosswordFrame";
+      frame.src = "crossword.html"; // IMPORTANT: path must be correct relative to index.html
+      frame.style.position = "fixed";
+      frame.style.left = "0";
+      frame.style.top = "0";
+      frame.style.width = "100vw";
+      frame.style.height = "100vh";
+      frame.style.border = "none";
+      frame.style.zIndex = "9999";
+      frame.style.display = "none";
+      document.body.appendChild(frame);
+    }
+    return frame;
+  }
+  
+  function ensureCrosswordCloseBtn() {
+    let btn = document.getElementById("crosswordCloseBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "crosswordCloseBtn";
+      btn.textContent = "Back to game (Q)";
+      btn.style.position = "fixed";
+      btn.style.right = "18px";
+      btn.style.top = "18px";
+      btn.style.zIndex = "10000";
+      btn.style.padding = "10px 14px";
+      btn.style.borderRadius = "12px";
+      btn.style.border = "none";
+      btn.style.cursor = "pointer";
+      btn.style.fontSize = "14px";
+      btn.style.background = "rgba(0,0,0,0.65)";
+      btn.style.color = "white";
+      btn.style.display = "none";
+  
+      btn.addEventListener("click", () => {
+        exitCrosswordToPickleball();
+      });
+  
+      document.body.appendChild(btn);
+    }
+    return btn;
+  }
+  
+  function enterCrosswordFromPickleball() {
+    // remember where we came from
+    returnWorldIndex = worldIndex;
+  
+    mode = "crossword";
+    crosswordEnteredAt = millis();
+  
+    // hide p5 canvas, show iframe
+    const frame = ensureCrosswordFrame();
+    const btn = ensureCrosswordCloseBtn();
+  
+    const canvas = document.querySelector("canvas");
+    if (canvas) canvas.style.display = "none";
+  
+    frame.style.display = "block";
+    btn.style.display = "block";
+  }
+  
+  function exitCrosswordToPickleball() {
+    // hide iframe, show p5 canvas
+    const frame = document.getElementById("crosswordFrame");
+    const btn = document.getElementById("crosswordCloseBtn");
+    if (frame) frame.style.display = "none";
+    if (btn) btn.style.display = "none";
+  
+    const canvas = document.querySelector("canvas");
+    if (canvas) canvas.style.display = "block";
+  
+    mode = "game";
+    worldIndex = returnWorldIndex; // should be pickleball
+  
+    // OPTIONAL: restart the waiting messages cleanly
+    pickleballEnteredAt = millis();
+    pickleballMsgIndex = 0;
+    pickleballCanCheckPhone = false;
   }
   
   
@@ -2970,6 +3062,11 @@ function drawRooftop() {
   }
 
   function keyPressed() {
+    if (mode === "crossword" && (key === "q" || key === "Q")) {
+        exitCrosswordToPickleball();
+        return;
+      }
+      
     
     if (mode === "findFriends") {
 
@@ -3046,6 +3143,21 @@ if (worldIndex === 2 && phoneOn && ftState === "win" && (key === "c" || key === 
     // leave extra screen
     if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends" || mode === "wish")) {
 
+        // If leaving FindFriends AFTER finding Halle, go to crossword
+        if (mode === "findFriends") {
+          if (ff.found && !crosswordShownOnce) {
+            crosswordShownOnce = true; // optional (remove if you want repeatable)
+            // go back to pickleball first (so returnWorldIndex is pickleball)
+            mode = "game";
+            worldIndex = returnWorldIndex;
+      
+            // show a tiny “kill some time” bubble for ~1s then open crossword
+            // simplest: just open crossword immediately:
+            enterCrosswordFromPickleball();
+            return;
+          }
+        }
+      
         // If leaving a wish, advance Tina/Kristen sequence
         if (mode === "wish") {
           if (wish.who === "tina" && tinaSeq.stage === "tina_ready") {
@@ -3058,6 +3170,7 @@ if (worldIndex === 2 && phoneOn && ftState === "win" && (key === "c" || key === 
         mode = "game";
         worldIndex = returnWorldIndex;
       }
+      
       
   }
   
