@@ -246,6 +246,12 @@ let victoryUntil = 0;
 const VICTORY_SHOW_MS = 2500;
 
 
+//// --- end of fortnite mechanics ---
+
+
+// pickleball scene
+let pickleballBGImg;
+const PICKLEBALL_SCREEN_INDEX = 4; // next screen after Fortnite (3)
 
 
 
@@ -317,7 +323,10 @@ function preload() {
       ];
 
 
+//
 
+    // pickleball scene
+    pickleballBGImg = loadImage("assets/Pickleball/pickleballBG.png.tiff");
 
 
 
@@ -439,6 +448,9 @@ function setup() {
     else if (idx === 3){
         drawFortniteScene();
     }
+    else if (idx === 4){
+        drawPickleball();
+    }
     
     else {
       drawGenericWorld(idx);
@@ -465,6 +477,35 @@ function setup() {
     textSize(18);
     text(`Screen ${idx}`, width / 2, 16);
   }
+
+
+  function drawPickleball() {
+    background(142, 149, 244);
+  
+    // background image
+    if (pickleballBGImg) {
+      imageMode(CENTER);
+      image(pickleballBGImg, width / 2, height / 2, width, height);
+    } else {
+      // fallback
+      fill(255, 255, 255, 160);
+      textAlign(CENTER, CENTER);
+      textSize(24);
+      text("Pickleball Court (missing image)", width / 2, height / 2);
+    }
+  
+    // optional ground overlay (only if you want it consistent with other scenes)
+    // noStroke();
+    // fill(255, 255, 255, 60);
+    // rect(0, height * 0.75, width, height * 0.25);
+  
+    // label
+    fill(255, 255, 255, 160);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    text("Pickleball", width / 2, 16);
+  }
+  
 
   
   function drawBedroom() {
