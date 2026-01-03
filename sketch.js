@@ -258,7 +258,36 @@ let pickleballEnteredAt = null;     // millis() when we entered screen
 let pickleballMsgIndex = 0;         // which line we’re showing
 let pickleballCanCheckPhone = false;
 
-const PICKLEBALL_WAIT_STEP_MS = 10000; // 10 seconds
+const PICKLEBALL_WAIT_STEP_MS = 1000; // 10 seconds 
+
+// Find Friends map image
+let findMapImg;
+
+// Halle movement
+const HALLE_MOVE_EVERY_MS = 900;   // speed of Halle moving (tweak)
+let nextHalleMoveAt = 0;
+
+
+// --- Find Friends (Find Halle) mini game ---
+const FF_GRID = 7;
+
+let ff = {
+  active: false,
+  px: 3, py: 3,      // player cell
+  hx: 0, hy: 0,      // halle cell
+  found: false,
+
+  // what cell the player is currently viewing (same as px/py, but keeps it explicit)
+  viewX: 3,
+  viewY: 3,
+
+  mapRect: null,
+  btns: null
+};
+
+let logoImg;
+
+const HALLE_CANDLE_ID = 401; // pick any unused id
 
 
 
@@ -335,6 +364,10 @@ function preload() {
 
     // pickleball scene
     pickleballBGImg = loadImage("assets/Pickleball/pickleballBG.png.tiff");
+    findMapImg = loadImage("assets/Pickleball/map1.png"); // <- your path
+
+    logoImg = loadImage("assets/Pickleball/logo2.webp");
+
 
 
 
@@ -573,23 +606,266 @@ function setup() {
     text(msg, width / 2, boxY + boxH / 2);
   }
   
+function startFindFriendsGame() {
+    ff.active = true;
+    ff.found = false;
+  
+    // spawn player in middle
+    ff.px = Math.floor(FF_GRID / 2);
+    ff.py = Math.floor(FF_GRID / 2);
+    ff.viewX = ff.px;
+    ff.viewY = ff.py;
+  
+    // spawn halle somewhere else
+    do {
+      ff.hx = Math.floor(random(FF_GRID));
+      ff.hy = Math.floor(random(FF_GRID));
+    } while (ff.hx === ff.viewX && ff.hy === ff.viewY);
+  
+    nextHalleMoveAt = millis() + HALLE_MOVE_EVERY_MS;
+  }
+  
+  
   function findFriends() {
     // launch next mini game
     returnWorldIndex = worldIndex; // so Q returns to pickleball
     mode = "findFriends";
+    startFindFriendsGame();
     spawnConfetti(10);
   }
   
-  
   function drawFindFriends() {
     background(142, 149, 244);
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(32);
-    text("Find Friends mini game here", width / 2, height / 2);
+  
+    // move Halle around while you search
+    updateHalleMovement();
+  
+    // map window rect
+    const mapSize = Math.min(width, height) * 0.62;
+    const mx = width / 2 - mapSize / 2;
+    const my = height / 2 - mapSize / 2;
+  
+    ff.mapRect = { x: mx, y: my, w: mapSize, h: mapSize };
+  
+    // card bg
+    noStroke();
+    fill(255, 255, 255, 70);
+    rect(mx - 18, my - 90, mapSize + 36, mapSize + 170, 18);
+
+    //logo
+    if (logoImg) {
+        const cardLeft = mx - 18;
+        const cardTop  = my - 90;
+      
+        const pad = 18;      // distance from card edge
+        const s = 60;        // logo size
+      
+        imageMode(CORNER);
+        image(logoImg, cardLeft + pad, cardTop + pad, s, s);
+      }
+  
+    // title
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, TOP);
+    textSize(28);
+    text("Find Halle", width / 2, my - 70);
+  
     textSize(14);
-    text("Press Q to return", width / 2, height / 2 + 50);
+    fill(255, 255, 255, 190);
+    text("You only see ONE area at a time. Move with arrows.", width / 2, my - 22);
+  
+    // draw the current cell slice from a single big map image
+    drawFindFriendsMapSlice(mx, my, mapSize);
+  
+    
+  
+    const halleHere = (ff.viewX === ff.hx && ff.viewY === ff.hy);
+    if (halleHere && !ff.found) {
+        ff.found = true;
+        spawnConfetti(20);
+      }
+
+    const halleCandle = candles.find(c => c.id === HALLE_CANDLE_ID);
+    const halleCandleCollected = !!halleCandle?.collected;
+    
+    if (ff.found || halleHere) {
+      const cx = mx + mapSize * 0.72;
+      const cy = my + mapSize * 0.62;
+    
+      // HALLE circle
+      noFill();
+      stroke(255, 111, 97, 240);
+      strokeWeight(6);
+      circle(cx, cy, mapSize * 0.12);
+    
+      noStroke();
+      fill(255, 111, 97, 240);
+      textAlign(CENTER, BOTTOM);
+      textSize(18);
+      text("HALLE", cx, cy - mapSize * 0.08);
+    
+      // candle on Halle (if not collected)
+      if (candleImg && !halleCandleCollected) {
+        imageMode(CENTER);
+        image(candleImg, cx, cy + mapSize * 0.02, 70, 70);
+    
+        fill(255, 30, 30);
+        textAlign(CENTER, TOP);
+        textSize(14);
+        text("Press C to collect", cx, cy + mapSize * 0.10);
+      }
+    }
+    
+  
+    // buttons
+    ff.btns = makeFindFriendsButtons(mx, my, mapSize);
+    drawFindFriendsButton(ff.btns.up, "↑");
+    drawFindFriendsButton(ff.btns.down, "↓");
+    drawFindFriendsButton(ff.btns.left, "←");
+    drawFindFriendsButton(ff.btns.right, "→");
+  
+    // status
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, TOP);
+    textSize(16);
+  
+    if (!ff.found) {
+      text("She’s moving… good luck.", width / 2, my + mapSize + 20);
+      text("Press Q to return", width / 2, my + mapSize + 44);
+    } else {
+      text("YOU FOUND HALLE ", width / 2, my + mapSize + 20);
+      text("Press Q to go back", width / 2, my + mapSize + 44);
+    }
   }
+  
+  
+  function drawFindFriendsButton(r, label) {
+    // hover
+    const hover = mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+  
+    noStroke();
+    fill(0, 0, 0, hover ? 170 : 130);
+    rect(r.x, r.y, r.w, r.h, 16);
+  
+    stroke(255, 255, 255, 110);
+    strokeWeight(2);
+    noFill();
+    rect(r.x, r.y, r.w, r.h, 16);
+  
+    noStroke();
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, CENTER);
+    textSize(r.w * 0.45);
+    text(label, r.x + r.w / 2, r.y + r.h / 2);
+  }
+  
+  function makeFindFriendsButtons(mx, my, mapSize) {
+    const s = Math.max(54, Math.min(90, mapSize * 0.12));
+    const gap = 34;            // was 16
+    const extra = 10;          // NEW: pushes even further out
+    const updown = 45;
+  
+    return {
+      up:    { x: mx + mapSize / 2 - s / 2, y: my - s - gap - extra - updown , w: s, h: s },
+      down:  { x: mx + mapSize / 2 - s / 2, y: my + mapSize + gap + extra + updown, w: s, h: s },
+      left:  { x: mx - s - gap - extra,     y: my + mapSize / 2 - s / 2, w: s, h: s },
+      right: { x: mx + mapSize + gap + extra, y: my + mapSize / 2 - s / 2, w: s, h: s }
+    };
+  }
+  
+  
+  function ffMove(dx, dy) {
+    if (mode !== "findFriends") return;
+  
+    ff.viewX = constrain(ff.viewX + dx, 0, FF_GRID - 1);
+    ff.viewY = constrain(ff.viewY + dy, 0, FF_GRID - 1);
+  
+    // tiny feedback
+    spawnConfetti(2);
+  
+    // if halle is currently in this cell, you can “find” her
+    if (ff.viewX === ff.hx && ff.viewY === ff.hy) {
+      ff.found = true;
+      spawnConfetti(35);
+    }
+  }
+  
+
+  function updateHalleMovement() {
+    if (mode !== "findFriends") return;
+    if (ff.found) return;
+  
+    // ✅ If she's currently in the cell you're viewing, do NOT move her
+    if (ff.viewX === ff.hx && ff.viewY === ff.hy) return;
+  
+    const now = millis();
+    if (now < nextHalleMoveAt) return;
+  
+    moveHalleOneStep();
+    nextHalleMoveAt = now + HALLE_MOVE_EVERY_MS;
+  }
+  
+  function moveHalleOneStep() {
+    // 4-neighbor random step (stay in bounds)
+    const dirs = [
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 }
+    ];
+  
+    // optional: bias away from player's current view so it's harder
+    // (comment out if you want pure random)
+    dirs.sort(() => random() - 0.5);
+  
+    // try a few random directions
+    for (let tries = 0; tries < 10; tries++) {
+      const d = random(dirs);
+      const nx = ff.hx + d.dx;
+      const ny = ff.hy + d.dy;
+  
+      if (nx < 0 || nx >= FF_GRID || ny < 0 || ny >= FF_GRID) continue;
+  
+      ff.hx = nx;
+      ff.hy = ny;
+      return;
+    }
+  }
+
+  function drawFindFriendsMapSlice(mx, my, size) {
+    // fallback if no image
+    if (!findMapImg) {
+      noStroke();
+      fill(30, 40, 60, 120);
+      rect(mx, my, size, size, 18);
+      fill(255, 255, 255, 180);
+      textAlign(CENTER, CENTER);
+      textSize(18);
+      text("Missing map.png", mx + size / 2, my + size / 2);
+      return;
+    }
+  
+    // each cell in the SOURCE image
+    const srcCellW = findMapImg.width / FF_GRID;
+    const srcCellH = findMapImg.height / FF_GRID;
+  
+    const sx = ff.viewX * srcCellW;
+    const sy = ff.viewY * srcCellH;
+  
+    // draw that slice into the destination square
+    imageMode(CORNER);
+    image(findMapImg, mx, my, size, size, sx, sy, srcCellW, srcCellH);
+  
+    // optional rounding mask look (simple overlay frame)
+    noFill();
+    stroke(255, 255, 255, 120);
+    strokeWeight(3);
+    rect(mx, my, size, size, 18);
+    noStroke();
+  }
+  
+  
+  
   
 
   
@@ -1918,6 +2194,15 @@ function drawRooftop() {
         unlocked: false,
         scale: 1.0
       },
+      {
+        id: HALLE_CANDLE_ID,
+        screen: -999,              // special: only collected in findFriends
+        x: () => 0,
+        y: () => 0,
+        collected: false,
+        unlocked: true,
+        scale: 1.0
+      },
       
       
       
@@ -2007,6 +2292,25 @@ function drawRooftop() {
   }
 
   function keyPressed() {
+    
+    if (mode === "findFriends") {
+
+    
+        if (key === "c" || key === "C") {
+            const halleHere = (ff.viewX === ff.hx && ff.viewY === ff.hy);
+            const halleCandle = candles.find(c => c.id === HALLE_CANDLE_ID);
+      
+            if (halleHere && halleCandle && !halleCandle.collected) {
+              halleCandle.collected = true;
+              candlesCollected += 1;
+              spawnConfetti(30);
+              ff.found = true;
+            }
+            return; // ✅ do not set interactPressed
+          }
+      
+    }
+
     if (key === "e" || key === "E") {
       tryInteract();
     }
@@ -2038,6 +2342,17 @@ function drawRooftop() {
   
 
   function mousePressed() {
+
+    // --- FindFriends arrow clicks ---
+  if (mode === "findFriends" && ff.btns && !ff.found) {
+    const inside = (r) =>
+      mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+
+    if (inside(ff.btns.left))  { ffMove(-1, 0); return; }
+    if (inside(ff.btns.right)) { ffMove(1, 0); return; }
+    if (inside(ff.btns.up))    { ffMove(0, -1); return; }
+    if (inside(ff.btns.down))  { ffMove(0, 1); return; }
+  }
 
 
     if (!phoneOn || !ftActive) return;
