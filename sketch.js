@@ -253,6 +253,14 @@ const VICTORY_SHOW_MS = 2500;
 let pickleballBGImg;
 const PICKLEBALL_SCREEN_INDEX = 4; // next screen after Fortnite (3)
 
+// --- Pickleball waiting sequence ---
+let pickleballEnteredAt = null;     // millis() when we entered screen
+let pickleballMsgIndex = 0;         // which line we’re showing
+let pickleballCanCheckPhone = false;
+
+const PICKLEBALL_WAIT_STEP_MS = 10000; // 10 seconds
+
+
 
 
 
@@ -377,6 +385,11 @@ function setup() {
         drawGrillGame();
         return;
       }
+    if (mode === "findFriends") {
+        drawFindFriends();
+        return;
+      }
+      
     
     
     
@@ -493,6 +506,8 @@ function setup() {
       textSize(24);
       text("Pickleball Court (missing image)", width / 2, height / 2);
     }
+    drawPickleballWaitingText();
+
   
     // optional ground overlay (only if you want it consistent with other scenes)
     // noStroke();
@@ -504,6 +519,76 @@ function setup() {
     textAlign(CENTER, TOP);
     textSize(18);
     text("Pickleball", width / 2, 16);
+  }
+
+  function onEnterPickleball() {
+    pickleballEnteredAt = millis();
+    pickleballMsgIndex = 0;
+    pickleballCanCheckPhone = false;
+  }
+
+  function drawPickleballWaitingText() {
+    // if we just got here, initialize
+    if (pickleballEnteredAt === null) onEnterPickleball();
+  
+    const elapsed = millis() - pickleballEnteredAt;
+  
+    // 0–10s: waiting on Halle
+    // 10–20s: still waiting
+    // 20–30s: still waiting...
+    // 30s+: maybe check phone (press f)
+    if (elapsed < 1 * PICKLEBALL_WAIT_STEP_MS) {
+      pickleballMsgIndex = 0;
+    } else if (elapsed < 2 * PICKLEBALL_WAIT_STEP_MS) {
+      pickleballMsgIndex = 1;
+    } else if (elapsed < 3 * PICKLEBALL_WAIT_STEP_MS) {
+      pickleballMsgIndex = 2;
+    } else {
+      pickleballMsgIndex = 3;
+      pickleballCanCheckPhone = true;
+    }
+  
+    let msg = "";
+    if (pickleballMsgIndex === 0) msg = "waiting on Halle";
+    if (pickleballMsgIndex === 1) msg = "still waiting";
+    if (pickleballMsgIndex === 2) msg = "still waiting...";
+    if (pickleballMsgIndex === 3) msg = "maybe you should check ur phone (press F)";
+  
+    // draw as a nice centered bubble
+    const pad = 18;
+    textSize(26);
+    textAlign(CENTER, CENTER);
+  
+    const tw = textWidth(msg);
+    const boxW = min(width * 0.86, tw + pad * 2);
+    const boxH = 70;
+    const boxX = width / 2 - boxW / 2;
+    const boxY = height * 0.18;
+  
+    noStroke();
+    fill(0, 0, 0, 120);
+    rect(boxX, boxY, boxW, boxH, 18);
+  
+    fill(255, 255, 255, 240);
+    text(msg, width / 2, boxY + boxH / 2);
+  }
+  
+  function findFriends() {
+    // launch next mini game
+    returnWorldIndex = worldIndex; // so Q returns to pickleball
+    mode = "findFriends";
+    spawnConfetti(10);
+  }
+  
+  
+  function drawFindFriends() {
+    background(142, 149, 244);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(32);
+    text("Find Friends mini game here", width / 2, height / 2);
+    textSize(14);
+    text("Press Q to return", width / 2, height / 2 + 50);
   }
   
 
@@ -1789,7 +1874,7 @@ function drawRooftop() {
         unlocked: true
       },
       {
-        id: 101,
+        id: 102,
         screen: BOOKSHELF_SCREEN_INDEX,
         x: () => width * 0.31,
         y: () => height * 0.55,
@@ -1932,6 +2017,10 @@ function drawRooftop() {
   
     // Use chug to start shooter
     if (key === "f" || key === "F") {
+        if (worldIndex === PICKLEBALL_SCREEN_INDEX && mode === "game" && pickleballCanCheckPhone) {
+            findFriends();
+            return;
+          }
       tryUseChugStartShooter();
     }
   
@@ -1941,7 +2030,7 @@ function drawRooftop() {
     }
   
     // leave extra screen
-    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame")) {
+    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends")) {
       mode = "game";
       worldIndex = returnWorldIndex;
     }
