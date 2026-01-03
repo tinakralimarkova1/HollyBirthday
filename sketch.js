@@ -120,6 +120,20 @@ let table = {
 let tableImg;
 let phoneOn = false;
 
+// --- FaceTime mini game ---
+let ftActive = false;
+let ftPopup = null; // {x,y,w,h, btn:{x,y,w,h}, expiresAt}
+let ftNextSpawnAt = 0;
+
+let ftScore = 0;
+let ftMisses = 0;
+
+// timings (ms)
+const FT_VISIBLE_MS = 1200;           // how long popup stays
+const FT_SPAWN_GAP_MIN = 600;         // min delay between popups
+const FT_SPAWN_GAP_MAX = 1400;        // max delay between popups
+
+
 
 // candles
 // bedroom (3): mav, bookshelf, desk
@@ -607,35 +621,28 @@ function drawRooftop() {
   
   function drawTinaGame() {
     background(142, 149, 244);
-
-    // Floor
+  
     noStroke();
     fill(255, 255, 255, 90);
     rect(0, height * 0.75, width, height * 0.25);
   
     imageMode(CENTER);
-    image(tableImg, width *0.75, height*0.75, width * 0.4, height * 0.4);
-
-    push();
+    image(tableImg, width * 0.75, height * 0.75, width * 0.4, height * 0.4);
+  
     if (phoneOn === true) {
       drawPhone();
+      updateFaceTimeGame();
+      drawFaceTimeGameUI();
     }
-    pop();
-
-    if (isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
-        fill(230,60,60);
-        textAlign(CENTER, BOTTOM);
-        textSize(18);
-        text("Press E", bookshelf.x() -160, bookshelf.y() - 370);
-
-
-      }
-      
-
-    
-
-
+  
+    if (mode === "game" && !phoneOn && isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
+      fill(230, 60, 60);
+      textAlign(CENTER, BOTTOM);
+      textSize(18);
+      text("Press E", table.x(), table.y() - 120);
+    }
   }
+  
 
 
   function drawPhone(){
@@ -660,7 +667,103 @@ function drawRooftop() {
   }
 
 
-
+  function getPhoneScreenRect() {
+    // MUST match your drawPhone() values
+    const x = width * 0.1;
+    const y = height * 0.09;
+    const w = width * 0.26;
+    const h = height * 0.84;
+    return { x, y, w, h };
+  }
+  
+  function startFaceTimeGame() {
+    ftScore = 0;
+    ftMisses = 0;
+    ftActive = true;
+    ftPopup = null;
+    ftNextSpawnAt = millis() + 400; // quick first spawn
+  }
+  
+  function spawnFaceTimePopup() {
+    const scr = getPhoneScreenRect();
+  
+    // popup size relative to screen
+    const w = scr.w * 0.75;
+    const h = scr.h * 0.22;
+  
+    // random position inside screen (keep margins so it doesn't clip)
+    const pad = 12;
+    const x = random(scr.x + pad, scr.x + scr.w - w - pad);
+    const y = random(scr.y + pad, scr.y + scr.h - h - pad);
+  
+    // button inside popup
+    const btnW = w * 0.32;
+    const btnH = h * 0.32;
+    const btnX = x + w - btnW - 16;
+    const btnY = y + h - btnH - 16;
+  
+    ftPopup = {
+      x, y, w, h,
+      btn: { x: btnX, y: btnY, w: btnW, h: btnH },
+      expiresAt: millis() + FT_VISIBLE_MS
+    };
+  }
+  
+  function updateFaceTimeGame() {
+    if (!ftActive) return;
+  
+    const now = millis();
+  
+    // if popup exists and expired → count as miss
+    if (ftPopup && now > ftPopup.expiresAt) {
+      ftPopup = null;
+      ftMisses += 1;
+      ftNextSpawnAt = now + random(FT_SPAWN_GAP_MIN, FT_SPAWN_GAP_MAX);
+    }
+  
+    // spawn if none and time reached
+    if (!ftPopup && now > ftNextSpawnAt) {
+      spawnFaceTimePopup();
+    }
+  }
+  
+  function drawFaceTimeGameUI() {
+    if (!ftActive) return;
+  
+    // HUD text near top-left of phone
+    const scr = getPhoneScreenRect();
+    fill(30, 30, 30, 220);
+    textAlign(LEFT, TOP);
+    textSize(14);
+    text(`Pickups: ${ftScore}   Misses: ${ftMisses}`, scr.x + 10, scr.y + 10);
+  
+    // draw popup
+    if (!ftPopup) return;
+  
+    // popup body
+    fill(255, 255, 255, 235);
+    rect(ftPopup.x, ftPopup.y, ftPopup.w, ftPopup.h, 18);
+  
+    // title
+    fill(40, 40, 40);
+    textAlign(LEFT, TOP);
+    textSize(18);
+    text("FaceTime", ftPopup.x + 16, ftPopup.y + 14);
+  
+    // subtitle
+    fill(80, 80, 80);
+    textSize(13);
+    text("Incoming call…", ftPopup.x + 16, ftPopup.y + 42);
+  
+    // pickup button
+    fill(40, 200, 120);
+    rect(ftPopup.btn.x, ftPopup.btn.y, ftPopup.btn.w, ftPopup.btn.h, 14);
+  
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(14);
+    text("Pick up", ftPopup.btn.x + ftPopup.btn.w / 2, ftPopup.btn.y + ftPopup.btn.h / 2);
+  }
   
 
 
@@ -898,6 +1001,21 @@ function drawRooftop() {
       
   }
 
+  function mousePressed() {
+    if (!phoneOn || !ftActive || !ftPopup) return;
+  
+    const b = ftPopup.btn;
+    if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
+      // success!
+      ftScore += 1;
+      spawnConfetti(15);
+  
+      ftPopup = null;
+      ftNextSpawnAt = millis() + random(FT_SPAWN_GAP_MIN, FT_SPAWN_GAP_MAX);
+    }
+  }
+  
+
   function tryInteract() {
     if (mode !== "game") return;
   
@@ -1118,6 +1236,8 @@ function drawRooftop() {
     if (isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
 
         phoneOn = true;
+        startFaceTimeGame();
+        return true;
     }
   
     return false;
