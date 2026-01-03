@@ -289,6 +289,36 @@ let logoImg;
 
 const HALLE_CANDLE_ID = 401; // pick any unused id
 
+// === People images ===
+let cobyImg, athenaImg, matthewImg, tinaImg, halleImg, kristenImg;
+
+// === Rooftop friend interaction ===
+const FRIEND_INTERACT_RADIUS = 150;
+
+let rooftopFriends = []; // will init in initRooftopFriends()
+
+// === Birthday wish screen ===
+const WISH_SCREEN_INDEX = 104;
+let wish = {
+  who: null,      // "coby" | "athena" | "matthew"
+  candleId: null, // candle tied to that wish
+};
+
+// candle ids (pick unique)
+const COBY_CANDLE_ID = 210;
+const ATHENA_CANDLE_ID = 211;
+const MATTHEW_CANDLE_ID = 212;
+
+// === Grill patty mini game ===
+const GRILL_PATTY_CANDLE_ID = 213;
+
+let patties = [];
+let pattyCorrectIndex = 0;
+let pattyPickedIndex = null;
+let grillCandlePos = { x: 0, y: 0 };
+let grillCandleRevealed = false;
+
+
 
 
 
@@ -368,6 +398,15 @@ function preload() {
 
     logoImg = loadImage("assets/Pickleball/logo2.webp");
 
+        // people
+    cobyImg = loadImage("assets/People/Coby.png");
+    matthewImg = loadImage("assets/People/Matthew.png");
+    athenaImg = loadImage("assets/People/Athena.png");
+    tinaImg = loadImage("assets/People/Tina.png");
+    halleImg = loadImage("assets/People/Halle.png");
+    kristenImg = loadImage("assets/People/Kristen.png");
+
+
 
 
 
@@ -394,6 +433,9 @@ function setup() {
     holly = new Player(width / 2, height * 0.68);
     initCandles();
     initRooftopPlants();
+    initRooftopFriends();
+    initGrillPattiesGame();
+
 
 
 
@@ -422,6 +464,11 @@ function setup() {
         drawFindFriends();
         return;
       }
+      if (mode === "wish") {
+        drawWishScreen();
+        return;
+      }
+      
       
     
     
@@ -523,6 +570,89 @@ function setup() {
     textSize(18);
     text(`Screen ${idx}`, width / 2, 16);
   }
+
+  function drawWishScreen() {
+    background(142, 149, 244);
+  
+    // card
+    const cardW = width * 0.78;
+    const cardH = height * 0.70;
+    const cx = width / 2 - cardW / 2;
+    const cy = height / 2 - cardH / 2;
+  
+    noStroke();
+    fill(255, 255, 255, 80);
+    rect(cx, cy, cardW, cardH, 20);
+  
+    // pick friend data
+    const f = rooftopFriends.find(x => x.key === wish.who);
+    const title = f ? `${f.name}'s Birthday Wish` : "Birthday Wish";
+  
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, TOP);
+    textSize(28);
+    text(title, width / 2, cy + 24);
+  
+    // friend image
+    // friend image (keep aspect ratio)
+    if (f && f.img()) {
+    const img = f.img();
+  
+    // set a max box the image is allowed to occupy
+    const maxH = cardH * 0.42;     // tweak (how tall on the card)
+    const maxW = cardW * 0.28;     // tweak (how wide on the card)
+  
+    const ar = img.width / img.height; // 1668/2388 ~ 0.698
+  
+    // start by fitting height, then clamp to maxW if needed
+    let drawH = maxH;
+    let drawW = drawH * ar;
+  
+    if (drawW > maxW) {
+      drawW = maxW;
+      drawH = drawW / ar;
+    }
+  
+    imageMode(CENTER);
+    image(img, width / 2, cy + cardH * 0.42, drawW, drawH);
+  }
+  
+  
+    // wish text
+    fill(30, 30, 30, 210);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    const msg = f ? f.wishText : "Happy birthday!!!";
+    text(msg, width / 2, cy + cardH * 0.62);
+  
+    // candle
+    const candle = candles.find(c => c.id === wish.candleId);
+    const already = !!candle?.collected;
+  
+    if (candleImg && !already) {
+      const candleX = width / 2;
+      const candleY = cy + cardH * 0.86;
+  
+      imageMode(CENTER);
+      image(candleImg, candleX, candleY, 70, 70);
+  
+      fill(230, 60, 60);
+      textAlign(CENTER, TOP);
+      textSize(14);
+      text("Press C to collect", candleX, candleY + 40);
+    } else {
+      fill(255, 255, 255, 200);
+      textAlign(CENTER, TOP);
+      textSize(14);
+      text("Candle collected ✅", width / 2, cy + cardH * 0.86);
+    }
+  
+    fill(255, 255, 255, 170);
+    textAlign(LEFT, TOP);
+    textSize(12);
+    text("Press Q to return", 20, 20);
+  }
+  
 
 
   function drawPickleball() {
@@ -936,23 +1066,23 @@ function startFindFriendsGame() {
   
     //mav interaction 
     if (!mav.moved && isPlayerNearPoint(mav.x(), mav.y(), 200)) {
-        fill(230,60,60);
+        fill(255);
         textAlign(CENTER,BOTTOM);
         textSize(14);
-        text("Press E", mav.x()+15, mav.y() - 100);
+        text("Press E", mav.x()-100, mav.y() - 100);
       }
 
     if (isPlayerNearPoint(desk.x(), desk.y(), DESK_INTERACT_RADIUS)) {
-        fill(230,60,60);
+        fill(255);
         textAlign(CENTER, BOTTOM);
         textSize(18);
-        text("Press E", desk.x(), desk.y() - 200);
+        text("Press E", desk.x(), desk.y() - 220);
       }
     if (isPlayerNearPoint(bookshelf.x(), bookshelf.y(), BOOKSHELF_INTERACT_RADIUS)) {
-        fill(230,60,60);
+        fill(255);
         textAlign(CENTER, BOTTOM);
         textSize(18);
-        text("Press E", bookshelf.x() -160, bookshelf.y() - 370);
+        text("Press E", bookshelf.x() -160, bookshelf.y() - 470);
       }
       
       
@@ -1069,9 +1199,14 @@ function drawRooftop() {
     // --- ROOFTOP Panel ---
     fill(255, 255, 255, 90);
     rect(0, height * 0.55, width, 200);
+
+    
+
   
     // --- plants 
     drawRooftopPlants();
+
+    
 
 
     // grill
@@ -1081,6 +1216,8 @@ function drawRooftop() {
     image(grillImg, width*0.65, height * 0.7, width *0.25, height * 0.45);
     pop();
 
+    drawRooftopFriends();
+
     //clouds
     drawCloud(width * 0.2, height * 0.2);
     drawCloud(width * 0.5, height * 0.15);
@@ -1088,10 +1225,10 @@ function drawRooftop() {
 
 
     if (mode === "game" && isPlayerNearPoint(grill.x(), grill.y(), GRILL_INTERACT_RADIUS)) {
-        fill(230, 60, 60);
+        fill(255);
         textAlign(CENTER, BOTTOM);
         textSize(18);
-        text("Press E", grill.x(), grill.y() - 160);
+        text("Press E", grill.x(), grill.y() - 300);
       }
       
 
@@ -1143,12 +1280,17 @@ function drawRooftop() {
       pop();
   
       // prompt when near
-      if (mode === "game" && isPlayerNearPoint(p.x() + p.offsetX, p.y(), PLANT_INTERACT_RADIUS)) {
-        fill(230, 60, 60);
+      if (
+        mode === "game" &&
+        !p.disabled &&                       // ✅ hide prompt once used
+        isPlayerNearPoint(p.x() + p.offsetX, p.y(), PLANT_INTERACT_RADIUS)
+      ) {
+        fill(255);
         textAlign(CENTER, BOTTOM);
         textSize(16);
         text("Press E", p.x() + p.offsetX, p.y() - 120);
       }
+      
   
       // tick down shake timer
       if (p.shakeTimer > 0) p.shakeTimer--;
@@ -1158,18 +1300,193 @@ function drawRooftop() {
   function drawGrillGame() {
     background(142, 149, 244);
   
-    fill(255, 255, 255, 220);
-    textAlign(CENTER, CENTER);
-    textSize(36);
-    text("Grill Mini Game", width / 2, height / 2 - 20);
+    // title
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, TOP);
+    textSize(28);
+    text("Grill Mini Game", width / 2, 22);
   
-    textSize(16);
-    text("Press Q to return", width / 2, height / 2 + 30);
+    textSize(14);
+    fill(255, 255, 255, 180);
+    text("Click a patty to lift it.", width / 2, 60);
+    text("Press Q to return", width / 2, 82);
   
-    // you can draw the grill image here too if you want:
-    // imageMode(CENTER);
-    // image(grillImg, width/2, height*0.65, width*0.25, height*0.45);
+    // grill surface
+    const gx = width * 0.5;
+    const gy = height * 0.62;
+    const gw = width * 0.72;
+    const gh = height * 0.32;
+  
+    noStroke();
+    fill(255, 255, 255, 70);
+    rect(gx - gw / 2, gy - gh / 2, gw, gh, 22);
+  
+    // patties layout
+    const py = gy + gh * 0.12;
+    const xs = [gx - gw * 0.22, gx, gx + gw * 0.22];
+  
+    for (let i = 0; i < 3; i++) {
+      const x = xs[i];
+      const w = 190;
+      const h = 90;
+  
+      // animate lift
+      const lift = patties[i].lift;
+      const targetLift = patties[i].picked ? 70 : 0;
+      patties[i].lift = lerp(patties[i].lift, targetLift, 0.12);
+        
+      // patty shadow
+      fill(0, 0, 0, 80);
+      ellipse(x, py + 16, w * 0.88, h * 0.7);
+  
+      // patty
+      fill(90, 55, 40, 240);
+      ellipse(x, py - patties[i].lift, w, h);
+  
+      // grill lines on patty
+      stroke(50, 30, 20, 110);
+      strokeWeight(6);
+      for (let k = -3; k <= 3; k++) {
+        line(x - 70, (py - patties[i].lift) + k * 10, x + 70, (py - patties[i].lift) + k * 10);
+      }
+      noStroke();
+  
+      // prompt on hover (optional)
+      const hover = dist(mouseX, mouseY, x, py - patties[i].lift) < 110;
+      if (hover) {
+        fill(255, 255, 255, 200);
+        textAlign(CENTER, TOP);
+        textSize(14);
+        text("click", x, (py - patties[i].lift) + 60);
+      }
+    }
+  
+    // show candle only after correct patty revealed (we unlock it)
+    drawCandles(GRILL_GAME_SCREEN_INDEX);
+    tryCollectCandles(GRILL_GAME_SCREEN_INDEX);
   }
+  
+
+  function initRooftopFriends() {
+    rooftopFriends = [
+      {
+        key: "coby",
+        name: "Coby",
+        img: () => cobyImg,
+        screen: 1,
+        x: () => width * 0.55,
+        y: () => height * 0.68, // ✅ same level as Holly
+        candleId: COBY_CANDLE_ID,
+        wishText: "Happy birthday!!\nYou are literally sunshine.\nProud of you always.",
+      },
+      {
+        key: "athena",
+        name: "Athena",
+        img: () => athenaImg,
+        screen: 1,
+        x: () => width * 0.45,
+        y: () => height * 0.68, // ✅
+        candleId: ATHENA_CANDLE_ID,
+        wishText: "HAPPY BDAY!!\nYou make everything feel possible.\nLove you tons.",
+      },
+      {
+        key: "matthew",
+        name: "Matthew",
+        img: () => matthewImg,
+        screen: 1,
+        x: () => width * 0.85,
+        y: () => height * 0.68, // ✅
+        candleId: MATTHEW_CANDLE_ID,
+        wishText: "Happy birthday!!!\nThank you for being you.\nGo be iconic today.",
+      },
+    ];
+  }
+  
+  
+  function initGrillPattiesGame() {
+    patties = [
+      { lift: 0, picked: false },
+      { lift: 0, picked: false },
+      { lift: 0, picked: false },
+    ];
+  
+    pattyCorrectIndex = Math.floor(random(3));
+    grillCandleRevealed = false;
+  
+    const gc = candles.find(c => c.id === GRILL_PATTY_CANDLE_ID);
+    if (gc) gc.unlocked = false;
+  }
+  
+
+  function drawRooftopFriends() {
+    if (worldIndex !== 1) return;
+  
+    for (const f of rooftopFriends) {
+      if (f.screen !== worldIndex) continue;
+  
+      const fx = f.x();
+      const fy = f.y();
+  
+      const img = f.img();
+      if (img) {
+        // ✅ draw them Holly-sized
+        const targetH = 670; // same as Holly
+        const targetW = targetH * (img.width / img.height);
+  
+        push();
+        imageMode(CENTER);
+        image(img, fx, fy, targetW, targetH);
+        pop();
+      }
+  
+      if (mode === "game" && isPlayerNearPoint(fx, fy, FRIEND_INTERACT_RADIUS)) {
+        fill(255);
+        textAlign(CENTER, BOTTOM);
+        textSize(16);
+        text("Press E", fx, fy - 300); // ✅ higher because they’re bigger now
+      }
+    }
+  }
+  
+
+  function handleGrillPattyClick() {
+    const gx = width * 0.5;
+    const gy = height * 0.62;
+    const gw = width * 0.72;
+    const gh = height * 0.32;
+  
+    const py = gy + gh * 0.12;
+    const xs = [gx - gw * 0.22, gx, gx + gw * 0.22];
+  
+    for (let i = 0; i < 3; i++) {
+      const x = xs[i];
+      const d = dist(mouseX, mouseY, x, py);
+  
+      if (d < 120) {
+        // ✅ toggle this patty up/down
+        patties[i].picked = !patties[i].picked;
+        spawnConfetti(4);
+  
+        // ✅ if correct patty is lifted for the first time, reveal candle
+        if (i === pattyCorrectIndex && patties[i].picked && !grillCandleRevealed) {
+          grillCandlePos.x = x;
+          grillCandlePos.y = py + 30;
+          grillCandleRevealed = true;
+  
+          const gc = candles.find(c => c.id === GRILL_PATTY_CANDLE_ID);
+          if (gc) gc.unlocked = true;
+  
+          spawnConfetti(14);
+        }
+  
+        return;
+      }
+    }
+  }
+  
+  
+  
+  
   
   
   function drawTinaGame() {
@@ -1189,10 +1506,10 @@ function drawRooftop() {
     }
   
     if (mode === "game" && !phoneOn && isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
-      fill(230, 60, 60);
+      fill(255);
       textAlign(CENTER, BOTTOM);
       textSize(18);
-      text("Press E", table.x(), table.y() - 120);
+      text("Press E", table.x(), table.y() - 220);
     }
   }
   
@@ -2203,6 +2520,45 @@ function drawRooftop() {
         unlocked: true,
         scale: 1.0
       },
+      {
+        id: GRILL_PATTY_CANDLE_ID,
+        screen: GRILL_GAME_SCREEN_INDEX,
+        x: () => grillCandlePos.x,
+        y: () => grillCandlePos.y,
+        collected: false,
+        unlocked: false,
+        scale: 1.0
+      },
+            // === Friend wish candles (must exist for wish screen to collect) ===
+            {
+                id: COBY_CANDLE_ID,
+                screen: WISH_SCREEN_INDEX,   // candle is collected on the wish screen
+                x: () => width / 2,
+                y: () => height * 0.80,
+                collected: false,
+                unlocked: true,
+                scale: 1.0
+              },
+              {
+                id: ATHENA_CANDLE_ID,
+                screen: WISH_SCREEN_INDEX,
+                x: () => width / 2,
+                y: () => height * 0.80,
+                collected: false,
+                unlocked: true,
+                scale: 1.0
+              },
+              {
+                id: MATTHEW_CANDLE_ID,
+                screen: WISH_SCREEN_INDEX,
+                x: () => width / 2,
+                y: () => height * 0.80,
+                collected: false,
+                unlocked: true,
+                scale: 1.0
+              },
+        
+      
       
       
       
@@ -2311,6 +2667,19 @@ function drawRooftop() {
       
     }
 
+    if (mode === "wish") {
+        if (key === "c" || key === "C") {
+          const candle = candles.find(c => c.id === wish.candleId);
+          if (candle && !candle.collected) {
+            candle.collected = true;
+            candlesCollected += 1;
+            spawnConfetti(25);
+          }
+          return;
+        }
+      }
+      
+
     if (key === "e" || key === "E") {
       tryInteract();
     }
@@ -2334,7 +2703,7 @@ function drawRooftop() {
     }
   
     // leave extra screen
-    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends")) {
+    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends" || mode === "wish")) {
       mode = "game";
       worldIndex = returnWorldIndex;
     }
@@ -2352,6 +2721,10 @@ function drawRooftop() {
     if (inside(ff.btns.right)) { ffMove(1, 0); return; }
     if (inside(ff.btns.up))    { ffMove(0, -1); return; }
     if (inside(ff.btns.down))  { ffMove(0, 1); return; }
+  }
+  if (mode === "grillGame") {
+    handleGrillPattyClick();
+    return;
   }
 
 
@@ -2401,6 +2774,8 @@ function drawRooftop() {
     if (tryInteractWithGrill()) return;        
     if (tryInteractWithTable()) return;
     if (tryPickupFortniteLoot()) return;
+    if (tryInteractWithFriend()) return; // ✅ ADD THIS
+
 
 
   }
@@ -2541,45 +2916,39 @@ function drawRooftop() {
   }
   
   function initRooftopPlants() {
-    // worldIndex 0 is rooftop in your code
     rooftopPlants = [
-      { id: 0, screen: 1, x: () => width * 0.07, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
-      { id: 1, screen: 1, x: () => width * 0.25, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
-      { id: 2, screen: 1, x: () => width * 0.75, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
-      { id: 3, screen: 1, x: () => width * 0.93, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 }
+      { id: 0, screen: 1, x: () => width * 0.07, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0, disabled: false },
+      { id: 1, screen: 1, x: () => width * 0.25, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0, disabled: false },
+      { id: 2, screen: 1, x: () => width * 0.75, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0, disabled: false },
+      { id: 3, screen: 1, x: () => width * 0.93, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0, disabled: false }
     ];
   
-    
     for (const p of rooftopPlants) p.isCorrect = (p.id === 1);
   }
   
   function tryInteractWithRooftopPlants() {
-    // only on rooftop (worldIndex 0 in your current mapping)
     if (worldIndex !== 1) return false;
   
     for (const p of rooftopPlants) {
+      if (p.disabled) continue; // ✅ hard lock
+  
       const px = p.x() + p.offsetX;
       const py = p.y();
   
       if (isPlayerNearPoint(px, py, PLANT_INTERACT_RADIUS)) {
-        // already moved? just do a tiny shake feedback
-        if (p.moved) {
-          p.shakeTimer = PLANT_SHAKE_FRAMES;
-          return true;
-        }
+  
+        // 🔒 disable plant forever after first press
+        p.disabled = true;
   
         if (p.isCorrect) {
-          // slide
           p.moved = true;
           p.offsetX = PLANT_SLIDE_DIST;
   
-          // unlock candle
           const hidden = candles.find(c => c.id === ROOFTOP_PLANT_CANDLE_ID);
           if (hidden) hidden.unlocked = true;
   
           spawnConfetti(20);
         } else {
-          // wrong plant shakes
           p.shakeTimer = PLANT_SHAKE_FRAMES;
         }
   
@@ -2589,8 +2958,11 @@ function drawRooftop() {
   
     return false;
   }
+  
 
   function tryInteractWithGrill() {
+   
+
     // grill is on rooftop (worldIndex 0 in your current mapping)
     if (worldIndex !== grill.screen) return false;
   
@@ -2599,6 +2971,8 @@ function drawRooftop() {
       mode = "grillGame";
       worldIndex = GRILL_GAME_SCREEN_INDEX; // optional but consistent
       spawnConfetti(12);
+      initGrillPattiesGame(); // reset patties + re-hide candle each time you open
+
       return true;
     }
   
@@ -2617,5 +2991,27 @@ function drawRooftop() {
     return false;
   }
   
+  function tryInteractWithFriend() {
+    if (mode !== "game") return false;
+    if (worldIndex !== 1) return false;
+  
+    for (const f of rooftopFriends) {
+      const fx = f.x();
+      const fy = f.y();
+  
+      if (isPlayerNearPoint(fx, fy, FRIEND_INTERACT_RADIUS)) {
+        returnWorldIndex = worldIndex;
+        mode = "wish";
+        worldIndex = WISH_SCREEN_INDEX;
+  
+        wish.who = f.key;
+        wish.candleId = f.candleId;
+  
+        spawnConfetti(10);
+        return true;
+      }
+    }
+    return false;
+  }
   
   
