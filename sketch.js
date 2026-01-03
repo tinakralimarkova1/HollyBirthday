@@ -28,7 +28,7 @@ const BOOKSHELF_INTERACT_RADIUS = 180; // tweak
 
 
 
-const PLAYER_SPEED = 8;
+const PLAYER_SPEED = 20;
 
 
 
@@ -79,7 +79,34 @@ let bookshelf = {
     y: () => height * 0.69
   };
   
+
+// Grill scene
+
+let skylineImg; 
+let plantImg;
+let grillImg;
   
+
+
+// --- rooftop plant interaction ---
+const PLANT_INTERACT_RADIUS = 160;
+const PLANT_SLIDE_DIST = 120;     // how far correct plant slides
+const PLANT_SHAKE_FRAMES = 18;    // how long wrong plant shakes
+
+let rooftopPlants = [];           // plant objects
+const ROOFTOP_PLANT_CANDLE_ID = 200; // candle hidden behind plant
+
+
+
+// candles
+// bedroom (3): mav, bookshelf, desk
+// grill (5): plant, coby, matthew, athena, grill game 
+// fortnite (?): tina, kristen, 
+// pickleball (?): halle
+// basement (?): finn
+// total: 11
+
+
 
 
 
@@ -108,6 +135,15 @@ function preload() {
     excelImg = loadImage("assets/General/Excel.png");
     booksImg = loadImage("assets/Bedroom/books.png");
 
+    // grill scene
+    skylineImg = loadImage("assets/Grill/skyline2.png");
+    plantImg = loadImage("assets/Grill/plant.png");
+    grillImg = loadImage("assets/Grill/grill.png");
+
+
+
+
+
 
     // candles
     candleImg = loadImage("assets/General/Candle.png");
@@ -131,6 +167,8 @@ function setup() {
     spawnConfetti(40);
     holly = new Player(width / 2, height * 0.68);
     initCandles();
+    initRooftopPlants();
+
 
 
   }
@@ -197,7 +235,12 @@ function setup() {
   function drawWorld(idx) {
     if (idx === 0) {
       drawBedroom();
-    } else {
+    } 
+    else if (idx === 1){
+        drawRooftop();
+    }
+    
+    else {
       drawGenericWorld(idx);
     }
   }
@@ -386,6 +429,126 @@ function setup() {
   pop();
 }
 
+function drawRooftop() {
+    // candles: plant, coby, matthew, athena, 
+
+
+    // --- SKY GRADIENT (bluer, cleaner) ---
+    for (let y = 0; y < height; y++) {
+        const t = map(y, 0, height, 0, 1);
+    
+        const r = lerp(90, 140, t);
+        const g = lerp(140, 190, t);
+        const b = lerp(210, 255, t);
+    
+        stroke(r, g, b);
+        line(0, y, width, y);
+    }
+    noStroke();
+
+    // --- SKYLINE ---
+    push();
+    imageMode(CENTER);
+    image(skylineImg, width / 2, height *0.6, width , height *1.5);
+    pop();
+
+    
+
+  
+  
+  
+   
+  
+    // --- ROOFTOP FLOOR ---
+    let floorColor = 140
+    fill(floorColor,floorColor, floorColor);
+    rect(0, height * 0.75, width, height * 0.25);
+  
+    // --- ROOFTOP Panel ---
+    fill(255, 255, 255, 90);
+    rect(0, height * 0.55, width, 200);
+  
+    // --- plants 
+    drawRooftopPlants();
+
+
+    // grill
+
+    push();
+    imageMode(CENTER);
+    image(grillImg, width*0.65, height * 0.7, width *0.25, height * 0.45);
+    pop();
+
+    //clouds
+    drawCloud(width * 0.2, height * 0.2);
+    drawCloud(width * 0.5, height * 0.15);
+    drawCloud(width * 0.75, height * 0.25);
+
+    
+    // --- LABEL ---
+    fill(255, 255, 255, 160);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    text("Rooftop", width / 2, 16);
+  }
+
+  function drawCloud(x, y ) {
+    push();
+    translate(x, y);
+    
+    noStroke();
+    fill(255, 255, 255, 200);
+  
+    // main body
+    ellipse(0, 0, 120, 60);
+    ellipse(-40, 0, 70, 50);
+    ellipse(40, 0, 70, 50);
+  
+    // top bumps
+    ellipse(-20, -25, 60, 50);
+    ellipse(20, -25, 70, 55);
+  
+    pop();
+  }
+  
+  function drawRooftopPlants() {
+    if (!plantImg) return;
+  
+    for (const p of rooftopPlants) {
+      if (p.screen !== worldIndex) continue;
+  
+      // shake effect when wrong plant
+      const shakeX = (p.shakeTimer > 0) ? sin(frameCount * 0.9) * 8 : 0;
+  
+      push();
+      imageMode(CENTER);
+      image(
+        plantImg,
+        p.x() + p.offsetX + shakeX,
+        p.y(),
+        width * 0.18,
+        height * 0.30
+      );
+      pop();
+  
+      // prompt when near
+      if (mode === "game" && isPlayerNearPoint(p.x() + p.offsetX, p.y(), PLANT_INTERACT_RADIUS)) {
+        fill(230, 60, 60);
+        textAlign(CENTER, BOTTOM);
+        textSize(16);
+        text("Press E", p.x() + p.offsetX, p.y() - 120);
+      }
+  
+      // tick down shake timer
+      if (p.shakeTimer > 0) p.shakeTimer--;
+    }
+  }
+  
+
+
+
+  
+
 
   
   
@@ -509,7 +672,17 @@ function setup() {
         collected: false,
         unlocked: true,
         scale:2.2
+      },
+      {
+        id: ROOFTOP_PLANT_CANDLE_ID,
+        screen: 1, // rooftop worldIndex
+        x: () => width * 0.20,          // behind the correct plant (match plant id 2)
+        y: () => height * 0.75,
+        collected: false,
+        unlocked: false,
+        scale: 1
       }
+      
       
       
     ];
@@ -560,7 +733,7 @@ function setup() {
       const cx = c.x();
       const cy = c.y();
   
-      if (isPlayerNearPoint(cx, cy, 150)) {
+      if (isPlayerNearPoint(cx, cy, 150) && c.unlocked === true) {
         c.collected = true;
         candlesCollected += 1;
   
@@ -617,6 +790,8 @@ function setup() {
     if (tryInteractWithDesk()) return;
     if (tryInteractWithBookshelf()) return;
     if (tryInteractWithMav()) return;
+    if (tryInteractWithRooftopPlants()) return;
+
   }
   
   
@@ -749,6 +924,56 @@ function setup() {
       worldIndex = BOOKSHELF_SCREEN_INDEX; // optional but consistent
       spawnConfetti(10);
       return true;
+    }
+  
+    return false;
+  }
+  
+  function initRooftopPlants() {
+    // worldIndex 0 is rooftop in your code
+    rooftopPlants = [
+      { id: 0, screen: 1, x: () => width * 0.07, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
+      { id: 1, screen: 1, x: () => width * 0.25, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
+      { id: 2, screen: 1, x: () => width * 0.75, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 },
+      { id: 3, screen: 1, x: () => width * 0.93, y: () => height * 0.65, offsetX: 0, moved: false, shakeTimer: 0 }
+    ];
+  
+    
+    for (const p of rooftopPlants) p.isCorrect = (p.id === 1);
+  }
+  
+  function tryInteractWithRooftopPlants() {
+    // only on rooftop (worldIndex 0 in your current mapping)
+    if (worldIndex !== 1) return false;
+  
+    for (const p of rooftopPlants) {
+      const px = p.x() + p.offsetX;
+      const py = p.y();
+  
+      if (isPlayerNearPoint(px, py, PLANT_INTERACT_RADIUS)) {
+        // already moved? just do a tiny shake feedback
+        if (p.moved) {
+          p.shakeTimer = PLANT_SHAKE_FRAMES;
+          return true;
+        }
+  
+        if (p.isCorrect) {
+          // slide like mav
+          p.moved = true;
+          p.offsetX = PLANT_SLIDE_DIST;
+  
+          // unlock candle
+          const hidden = candles.find(c => c.id === ROOFTOP_PLANT_CANDLE_ID);
+          if (hidden) hidden.unlocked = true;
+  
+          spawnConfetti(20);
+        } else {
+          // wrong plant shakes
+          p.shakeTimer = PLANT_SHAKE_FRAMES;
+        }
+  
+        return true;
+      }
     }
   
     return false;
