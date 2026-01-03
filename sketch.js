@@ -258,7 +258,7 @@ let pickleballEnteredAt = null;     // millis() when we entered screen
 let pickleballMsgIndex = 0;         // which line we’re showing
 let pickleballCanCheckPhone = false;
 
-const PICKLEBALL_WAIT_STEP_MS = 1000; // 10 seconds 
+const PICKLEBALL_WAIT_STEP_MS = 10000; // 10 seconds 
 
 // Find Friends map image
 let findMapImg;
@@ -398,22 +398,33 @@ const CAKE_SCREEN_INDEX = 5;     // last worldIndex screen
 let cakeImg, finnImg;
 
 const CAKE_INTERACT_RADIUS = 220;
-const FINN_INTERACT_RADIUS = 170;
+const FINN_INTERACT_RADIUS = 220;
 
 let cakeObj = {
   screen: CAKE_SCREEN_INDEX,
-  x: () => width * 0.52,
+  x: () => width * 0.6,
   y: () => height * 0.78
 };
 
 let finn = {
   screen: CAKE_SCREEN_INDEX,
-  x: () => width * 0.15,
-  y: () => height * 0.72
+  x: () => width * 0.28,
+  y: () => height * 0.8
 };
 
 // Finn wish candle
 const FINN_WISH_CANDLE_ID = 700;
+
+// === Ending animation ===
+let endStartAt = null;
+let endBalloons = [];
+let endSparkles = [];
+
+// Pickleball court candles
+const PICKLEBALL_CANDLE_1 = 620;
+const PICKLEBALL_CANDLE_2 = 621;
+const PICKLEBALL_CANDLE_3 = 622;
+const PICKLEBALL_CANDLE_4 = 623;
 
 
 
@@ -597,10 +608,14 @@ function setup() {
   }
 
   function drawEndingScreen() {
-    // same vibe as landing page
+    if (endStartAt === null) endStartAt = millis();
+    const t = (millis() - endStartAt) / 1000;
+  
+    // background (same periwinkle)
     background(142, 149, 244);
   
-    if (frameCount % 10 === 0) spawnConfetti(CONFETTI_RATE);
+    // keep confetti flowing
+    if (frameCount % 8 === 0) spawnConfetti(CONFETTI_RATE);
   
     for (let i = confetti.length - 1; i >= 0; i--) {
       confetti[i].update();
@@ -608,12 +623,20 @@ function setup() {
       if (confetti[i].offscreen()) confetti.splice(i, 1);
     }
   
-    // “happy birthday” text
-    fill(255, 255, 255, 235);
-    textAlign(CENTER, CENTER);
-    textSize(64);
-    text("happy birthday", width / 2, height / 2);
+    // sparkle layer + balloons behind text
+    drawSparkles(t);
+    drawBalloons(t);
+  
+    // headline
+    drawHappyBirthdayText(t);
+  
+    // tiny prompt
+    fill(255, 255, 255, 150);
+    textAlign(CENTER, BOTTOM);
+    textSize(12);
+    text("Press Q to replay", width / 2, height - 18);
   }
+  
 
   function tryInteractWithFinn() {
     if (mode !== "game") return false;
@@ -638,9 +661,9 @@ function setup() {
     if (worldIndex !== CAKE_SCREEN_INDEX) return false;
   
     if (isPlayerNearPoint(cakeObj.x(), cakeObj.y(), CAKE_INTERACT_RADIUS)) {
-      mode = "ending";
-      spawnConfetti(60);
-      return true;
+        startEnding();
+        return true;
+        
     }
     return false;
   }
@@ -723,6 +746,156 @@ function setup() {
     }
   }
 
+  function startEnding() {
+    mode = "ending";
+    endStartAt = millis();
+  
+    // burst of confetti at start
+    spawnConfetti(80);
+  
+    // make balloons
+    endBalloons = [];
+    const n = 10;
+    for (let i = 0; i < n; i++) {
+      endBalloons.push({
+        x: random(width),
+        y: height + random(50, 400),
+        r: random(22, 44),
+        speed: random(0.6, 1.6),
+        drift: random(-0.6, 0.6),
+        phase: random(TWO_PI)
+      });
+    }
+  
+    // sparkles
+    endSparkles = [];
+    for (let i = 0; i < 70; i++) {
+      endSparkles.push({
+        x: random(width),
+        y: random(height),
+        s: random(2, 6),
+        phase: random(TWO_PI),
+        tw: random(0.8, 1.8)
+      });
+    }
+  }
+  
+  function drawBalloons(t) {
+    for (const b of endBalloons) {
+      // float up + gentle sway
+      b.y -= b.speed;
+      b.x += b.drift + sin(t * 0.9 + b.phase) * 0.6;
+  
+      // wrap to bottom
+      if (b.y < -120) {
+        b.y = height + random(80, 280);
+        b.x = random(width);
+      }
+  
+      // balloon body
+      noStroke();
+      fill(255, 255, 255, 35);
+      ellipse(b.x, b.y, b.r * 1.4, b.r * 1.8);
+  
+      // highlight
+      fill(255, 255, 255, 55);
+      ellipse(b.x - b.r * 0.2, b.y - b.r * 0.25, b.r * 0.35, b.r * 0.55);
+  
+      // string
+      stroke(255, 255, 255, 120);
+      strokeWeight(2);
+      noFill();
+      beginShape();
+      const len = 90;
+      for (let i = 0; i < 5; i++) {
+        const yy = b.y + (i / 4) * len;
+        const xx = b.x + sin(t * 1.2 + b.phase + i) * 6;
+        vertex(xx, yy);
+      }
+      endShape();
+      noStroke();
+    }
+  }
+  
+  function drawSparkles(t) {
+    for (const sp of endSparkles) {
+      const a = 80 + 120 * (0.5 + 0.5 * sin(t * sp.tw + sp.phase));
+      noStroke();
+      fill(255, 255, 255, a);
+      circle(sp.x, sp.y, sp.s);
+  
+      // tiny cross glint
+      stroke(255, 255, 255, a);
+      strokeWeight(1.5);
+      line(sp.x - sp.s * 1.4, sp.y, sp.x + sp.s * 1.4, sp.y);
+      line(sp.x, sp.y - sp.s * 1.4, sp.x, sp.y + sp.s * 1.4);
+      noStroke();
+    }
+  }
+  
+  function drawHappyBirthdayText(t) {
+    // subtle dark vignette behind text
+    noStroke();
+    fill(0, 0, 0, 80);
+    rect(0, 0, width, height);
+  
+    const msg1 = "HAPPY";
+    const msg2 = "BIRTHDAY";
+  
+    textAlign(CENTER, CENTER);
+  
+    // glow layers (same font; just alpha)
+    const baseX = width / 2;
+    const baseY = height * 0.42;
+  
+    const waveAmp = 14;
+    const wobble = sin(t * 2.4) * 6;
+  
+    // big headline sizes
+    const s1 = min(110, width * 0.12);
+    const s2 = min(120, width * 0.13);
+  
+    // draw each letter with bounce + wave
+    function drawWord(word, y, size) {
+      textSize(size);
+  
+      // measure roughly by letter spacing
+      const letterGap = size * 0.62;
+      const totalW = (word.length - 1) * letterGap;
+      const startX = baseX - totalW / 2;
+  
+      for (let i = 0; i < word.length; i++) {
+        const ch = word[i];
+        const x = startX + i * letterGap;
+  
+        const localWave = sin(t * 3 + i * 0.6) * waveAmp;
+        const pop = max(0, sin(t * 3.2 - i * 0.25)) * 8; // little “jump”
+  
+        // glow
+        fill(255, 255, 255, 60);
+        text(ch, x + 3, y + localWave + 3 - pop);
+  
+        fill(255, 255, 255, 110);
+        text(ch, x + 1.5, y + localWave + 1.5 - pop);
+  
+        // main
+        fill(255, 255, 255, 235);
+        text(ch, x, y + localWave - pop);
+      }
+    }
+  
+    drawWord(msg1, baseY + wobble, s1);
+    drawWord(msg2, baseY + s1 * 0.9 + wobble, s2);
+  
+    // subtitle shimmer
+    const sub = "you did it 🎉";
+    textSize(22);
+    const a = 140 + 80 * (0.5 + 0.5 * sin(t * 2.2));
+    fill(255, 255, 255, a);
+    text(sub, baseX, height * 0.72);
+  }
+  
+
   function drawGenericWorld(idx) {
     const base = [142, 149, 244];
     const shift = ((idx % 4) + 4) % 4;
@@ -763,26 +936,31 @@ function setup() {
       const cw = width * 0.38;
       const ch = cw * (cakeImg.height / cakeImg.width);
       imageMode(CENTER);
-      image(cakeImg, cakeObj.x(), cakeObj.y(), cw, ch);
+      image(cakeImg, cakeObj.x(), cakeObj.y(), cw/2.5, ch/2.5);
     }
   
     // draw Finn
-    if (finnImg) {
-      const targetH = 420;
-      const targetW = targetH * (finnImg.width / finnImg.height);
-      imageMode(CENTER);
-      image(finnImg, finn.x(), finn.y(), targetW, targetH);
-    }
+
   
     // draw ALL friends (you already have these images)
+    const step = 0.12;        // spacing between people
+    const start = 0.22;      // slightly left so everything stays centered
+
     const people = [
-      { img: cobyImg,    x: width * 0.28, y: height * 0.68, name: "Coby" },
-      { img: athenaImg,  x: width * 0.40, y: height * 0.68, name: "Athena" },
-      { img: matthewImg, x: width * 0.52, y: height * 0.68, name: "Matthew" },
-      { img: tinaImg,    x: width * 0.64, y: height * 0.68, name: "Tina" },
-      { img: kristenImg, x: width * 0.76, y: height * 0.68, name: "Kristen" },
-      { img: halleImg,   x: width * 0.88, y: height * 0.68, name: "Halle" },
+    { img: cobyImg,    x: width * (start + step * 0), y: height * 0.68, name: "Coby" },
+    { img: athenaImg,  x: width * (start + step * 1), y: height * 0.68, name: "Athena" },
+    { img: matthewImg, x: width * (start + step * 2), y: height * 0.68, name: "Matthew" },
+
+    // ⬇️ GAP HERE (one person-width for the cake)
+    // cake goes roughly at: start + step * 3
+
+    { img: tinaImg,    x: width * (start + step * 4), y: height * 0.68, name: "Tina" },
+    { img: kristenImg, x: width * (start + step * 5), y: height * 0.68, name: "Kristen" },
+    { img: halleImg,   x: width * (start + step * 6), y: height * 0.68, name: "Halle" },
     ];
+
+    
+
   
     for (const p of people) {
       if (!p.img) continue;
@@ -791,6 +969,13 @@ function setup() {
       imageMode(CENTER);
       image(p.img, p.x, p.y, targetW, targetH);
     }
+
+    if (finnImg) {
+        const targetH = 320;
+        const targetW = targetH * (finnImg.width / finnImg.height);
+        imageMode(CENTER);
+        image(finnImg, finn.x(), finn.y(), targetW, targetH);
+      }
   
     // prompts
     if (mode === "game") {
@@ -866,8 +1051,8 @@ const title = `${name}'s Birthday Wish`;
   
       fill(255, 255, 255, 230);
       textAlign(CENTER, TOP);
-      textSize(18);
-      text(msg, width / 2, cy + cardH * 0.62);
+      textSize(24);
+      text(msg, width / 2, cy + cardH * 0.6);
       
   
     // candle
@@ -989,6 +1174,15 @@ const title = `${name}'s Birthday Wish`;
     pickleballEnteredAt = millis();
     pickleballMsgIndex = 0;
     pickleballCanCheckPhone = false;
+    [
+        PICKLEBALL_CANDLE_1,
+        PICKLEBALL_CANDLE_2,
+        PICKLEBALL_CANDLE_3,
+        PICKLEBALL_CANDLE_4
+      ].forEach(id => {
+        const c = candles.find(x => x.id === id);
+        if (c) c.unlocked = true;
+      });
   }
 
   function drawPickleballWaitingText() {
@@ -1819,7 +2013,7 @@ function drawRooftop() {
         x: () => width * 0.55,
         y: () => height * 0.68, // ✅ same level as Holly
         candleId: COBY_CANDLE_ID,
-        wishText: "Happy Birthday my Holly Holly Bo Bolly! \nI love you so much dad you\’re the best thing ever and I love you my whole heart my perfect angel Holly! \nCHEERS TO 22 (taylor\’s version) ",
+        wishText: "Happy Birthday my Holly Holly Bo Bolly! \nI love you so much dad you\’re the best thing ever and \nI love you my whole heart my perfect angel Holly! \nCHEERS TO 22 (taylor\’s version) ",
       },
       {
         key: "athena",
@@ -1829,7 +2023,7 @@ function drawRooftop() {
         x: () => width * 0.45,
         y: () => height * 0.68, // ✅
         candleId: ATHENA_CANDLE_ID,
-        wishText: "happy 22nd birthday to my half birthday twin! you will forever be in my contacts as Henry Wheeler just btw.\n I\’m so lucky to have known you for so long and to have seen you grow into the person you are today. now all that\’s left for us to do is to go to Disneyland together🤞 \nI hope you have enjoyed your day and that tonight treats us kindly \n(may we both be spared from the level of anguish we experienced with How to Apologize to a Cat on WikiHow during jackbox).\n love you lots!",
+        wishText: "happy 22nd birthday to my half birthday twin! you will forever be in my contacts as Henry Wheeler just btw.\n I\’m so lucky to have known you for so long and to have seen you grow into the person you are today.\n now all that\’s left for us to do is to go to Disneyland together🤞 I hope you have enjoyed your day and that tonight treats us kindly \n(may we both be spared from the level of anguish we experienced with How to Apologize to a Cat on WikiHow during jackbox).\n love you lots!",
       },
       {
         key: "matthew",
@@ -1839,7 +2033,7 @@ function drawRooftop() {
         x: () => width * 0.85,
         y: () => height * 0.68, // ✅
         candleId: MATTHEW_CANDLE_ID,
-        wishText: "Happy birthday!!!\nThank you for being you.\nGo be iconic today.",
+        wishText: "Happy birthday Holly!!!\n I cannot believe I met you in 8th grade and now you’re turning 22!! (Insert Taylor swift soundtrack).\n Love you so so so much and I hope you have a great year❤️❤️",
       },
     ];
   }
@@ -3325,6 +3519,35 @@ function drawRooftop() {
     unlocked: true,
     scale: 1.0
   },
+  {
+    id: PICKLEBALL_CANDLE_1,
+    screen: PICKLEBALL_SCREEN_INDEX,
+    x: () => width * 0.18,   // left side
+    y: () => height * 0.78,
+    collected: false,
+    unlocked: false,
+    scale: 2.0
+  },
+  {
+    id: PICKLEBALL_CANDLE_2,
+    screen: PICKLEBALL_SCREEN_INDEX,
+    x: () => width * 0.38,   // left-middle
+    y: () => height * 0.78,
+    collected: false,
+    unlocked: false,
+    scale: 2.0
+  },
+  {
+    id: PICKLEBALL_CANDLE_3,
+    screen: PICKLEBALL_SCREEN_INDEX,
+    x: () => width * 0.58,   // right-middle
+    y: () => height * 0.78,
+    collected: false,
+    unlocked: false,
+    scale: 2.0
+  },
+  
+  
   
   
               
@@ -3394,6 +3617,14 @@ function drawRooftop() {
   
         break; // collect only one per press
       }
+
+      if (mode === "grillGame" && screenIdx === GRILL_GAME_SCREEN_INDEX && c.id === GRILL_PATTY_CANDLE_ID) {
+        c.collected = true;
+        candlesCollected += 1;
+        spawnConfetti(25);
+        break;
+      }
+
       if (mode === "computer") {
         // collect computer screen candle
         
