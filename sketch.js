@@ -340,9 +340,17 @@ const WISH_DATA = {
   kristen: {
     name: "Kristen",
     img: () => kristenImg,
-    wishText: "HAPPY BDAYYYYY\nYou deserve the best day ever.\nLove you lots.",
+    wishText: "Happy birthday Holly!\n Thanks for being such a good friend and I hope you have an amazing day with all your activities!.",
   },
+  
 };
+
+WISH_DATA.halle = {
+    name: "Halle",
+    img: () => halleImg,
+    wishText: "HAPPY BIRTHDAYYYYY 🫶\nmiss you and love you.\nlet’s play!!!"
+  };
+  
 
 // --- FaceTime WIN reward (collected on the phone win screen) ---
 const FT_WIN_CANDLE_ID = 550;   // unique
@@ -354,6 +362,29 @@ const KRISTEN_WISH_CANDLE_ID = 552;
 // === Crossword (HTML overlay) ===
 let crosswordEnteredAt = null;
 let crosswordShownOnce = false; // optional, if you only want it once
+
+
+// === Pickleball post-FindFriends + Crossword sequence ===
+let pickleballPhase = "waiting"; 
+// "waiting" | "killTimePrompt" | "afterCrossword"
+
+let pickleballCanOpenCrossword = false;
+
+// Halle spawn on pickleball
+const PICKLEBALL_HALLE_RADIUS = 170;
+let pickleballHalle = {
+  screen: PICKLEBALL_SCREEN_INDEX,
+  x: () => width * 0.72,
+  y: () => height * 0.68,
+  spawned: false
+};
+
+// Crossword reward candles (pick unused ids)
+const CROSSWORD_CANDLE_1 = 610;
+const CROSSWORD_CANDLE_2 = 611;
+
+// Halle wish candle id
+const HALLE_WISH_CANDLE_ID = 612;
 
 
 
@@ -472,6 +503,12 @@ function setup() {
     initRooftopPlants();
     initRooftopFriends();
     initGrillPattiesGame();
+    window.addEventListener("message", (event) => {
+        if (event.data === "CROSSWORD_DONE") {
+          exitCrosswordToPickleball(true);
+        }
+      });
+      
 
 
 
@@ -682,7 +719,7 @@ const title = `${name}'s Birthday Wish`;
       imageMode(CENTER);
       image(candleImg, candleX, candleY, 70, 70);
   
-      fill(230, 60, 60);
+      fill(225);
       textAlign(CENTER, TOP);
       textSize(14);
       text("Press C to collect", candleX, candleY + 40);
@@ -722,6 +759,9 @@ const title = `${name}'s Birthday Wish`;
     // noStroke();
     // fill(255, 255, 255, 60);
     // rect(0, height * 0.75, width, height * 0.25);
+
+    drawPickleballHalle();
+
   
     // label
     fill(255, 255, 255, 160);
@@ -730,6 +770,59 @@ const title = `${name}'s Birthday Wish`;
     text("Pickleball", width / 2, 16);
   }
 
+  function drawPickleballHalle() {
+    if (worldIndex !== PICKLEBALL_SCREEN_INDEX) return;
+    if (pickleballPhase !== "afterCrossword") return;
+    if (!pickleballHalle.spawned) return;
+  
+    const hx = pickleballHalle.x();
+    const hy = pickleballHalle.y();
+  
+    if (halleImg) {
+      const targetH = 670;
+      const targetW = targetH * (halleImg.width / halleImg.height);
+  
+      push();
+      imageMode(CENTER);
+      image(halleImg, hx, hy, targetW, targetH);
+      pop();
+    }
+  
+    // prompt
+    if (mode === "game" && isPlayerNearPoint(hx, hy, PICKLEBALL_HALLE_RADIUS)) {
+      fill(255);
+      textAlign(CENTER, BOTTOM);
+      textSize(18);
+      text("Press E", hx, hy - 300);
+    }
+  }
+
+  function tryInteractWithPickleballHalle() {
+    if (mode !== "game") return false;
+    if (worldIndex !== PICKLEBALL_SCREEN_INDEX) return false;
+    if (pickleballPhase !== "afterCrossword") return false;
+    if (!pickleballHalle.spawned) return false;
+  
+    const hx = pickleballHalle.x();
+    const hy = pickleballHalle.y();
+  
+    if (isPlayerNearPoint(hx, hy, PICKLEBALL_HALLE_RADIUS)) {
+      returnWorldIndex = worldIndex;
+      mode = "wish";
+      worldIndex = WISH_SCREEN_INDEX;
+  
+      wish.who = "halle";
+      wish.candleId = HALLE_WISH_CANDLE_ID;
+  
+      spawnConfetti(15);
+      return true;
+    }
+  
+    return false;
+  }
+  
+  
+
   function onEnterPickleball() {
     pickleballEnteredAt = millis();
     pickleballMsgIndex = 0;
@@ -737,15 +830,40 @@ const title = `${name}'s Birthday Wish`;
   }
 
   function drawPickleballWaitingText() {
-    // if we just got here, initialize
+    if (pickleballPhase === "afterCrossword") {
+        return;
+      }
+    
+    // if we just got here, initialize (only for normal waiting phase)
     if (pickleballEnteredAt === null) onEnterPickleball();
   
+    // ---- NEW: kill-time prompt ----
+    if (pickleballPhase === "killTimePrompt") {
+      const msg = "lets kill some time while we wait for Halle (press F)";
+  
+      const pad = 18;
+      textSize(24);
+      textAlign(CENTER, CENTER);
+  
+      const tw = textWidth(msg);
+      const boxW = min(width * 0.86, tw + pad * 2);
+      const boxH = 70;
+      const boxX = width / 2 - boxW / 2;
+      const boxY = height * 0.18;
+  
+      noStroke();
+      fill(0, 0, 0, 120);
+      rect(boxX, boxY, boxW, boxH, 18);
+  
+      fill(255, 255, 255, 240);
+      text(msg, width / 2, boxY + boxH / 2);
+  
+      return;
+    }
+  
+    // ---- Original waiting logic ----
     const elapsed = millis() - pickleballEnteredAt;
   
-    // 0–10s: waiting on Halle
-    // 10–20s: still waiting
-    // 20–30s: still waiting...
-    // 30s+: maybe check phone (press f)
     if (elapsed < 1 * PICKLEBALL_WAIT_STEP_MS) {
       pickleballMsgIndex = 0;
     } else if (elapsed < 2 * PICKLEBALL_WAIT_STEP_MS) {
@@ -763,7 +881,6 @@ const title = `${name}'s Birthday Wish`;
     if (pickleballMsgIndex === 2) msg = "still waiting...";
     if (pickleballMsgIndex === 3) msg = "maybe you should check ur phone (press F)";
   
-    // draw as a nice centered bubble
     const pad = 18;
     textSize(26);
     textAlign(CENTER, CENTER);
@@ -781,6 +898,7 @@ const title = `${name}'s Birthday Wish`;
     fill(255, 255, 255, 240);
     text(msg, width / 2, boxY + boxH / 2);
   }
+  
   
 function startFindFriendsGame() {
     ff.active = true;
@@ -1123,6 +1241,38 @@ function startFindFriendsGame() {
     pickleballMsgIndex = 0;
     pickleballCanCheckPhone = false;
   }
+
+  function startPickleballKillTimePrompt() {
+    pickleballPhase = "killTimePrompt";
+    pickleballEnteredAt = millis();
+    pickleballMsgIndex = 0;
+    pickleballCanCheckPhone = false;      // not used here
+    pickleballCanOpenCrossword = true;    // allow F to open crossword
+  }
+  
+  function onCrosswordDone() {
+    // 🔒 lock pickleball into post-crossword state
+    pickleballPhase = "afterCrossword";
+  
+    // disable ALL phone / waiting logic
+    pickleballCanCheckPhone = false;
+    pickleballCanOpenCrossword = false;
+    pickleballEnteredAt = null;     // stops timed waiting messages
+    pickleballMsgIndex = -1;
+  
+    // unlock crossword reward candles
+    const c1 = candles.find(c => c.id === CROSSWORD_CANDLE_1);
+    const c2 = candles.find(c => c.id === CROSSWORD_CANDLE_2);
+    if (c1) c1.unlocked = true;
+    if (c2) c2.unlocked = true;
+  
+    // spawn Halle
+    pickleballHalle.spawned = true;
+  
+    spawnConfetti(25);
+  }
+  
+  
   
   
   
@@ -2968,6 +3118,38 @@ function drawRooftop() {
                 unlocked: true,
                 scale: 1.0
               },
+
+              // Crossword reward candles (spawn on pickleball after crossword)
+{
+    id: CROSSWORD_CANDLE_1,
+    screen: PICKLEBALL_SCREEN_INDEX,
+    x: () => width * 0.10,
+    y: () => height * 0.78,
+    collected: false,
+    unlocked: false,
+    scale: 2.0
+  },
+  {
+    id: CROSSWORD_CANDLE_2,
+    screen: PICKLEBALL_SCREEN_INDEX,
+    x: () => width * 0.20,
+    y: () => height * 0.78,
+    collected: false,
+    unlocked: false,
+    scale: 2.0
+  },
+  
+  // Halle birthday wish candle (collected on wish screen)
+  {
+    id: HALLE_WISH_CANDLE_ID,
+    screen: WISH_SCREEN_INDEX,
+    x: () => width / 2,
+    y: () => height * 0.80,
+    collected: false,
+    unlocked: true,
+    scale: 1.0
+  },
+  
               
               
               
@@ -3007,10 +3189,10 @@ function drawRooftop() {
       if (isPlayerNearPoint(cx, cy, 150)) {
         
   
-        fill(230, 20, 20, 200);
+        fill(255);
         textAlign(CENTER, BOTTOM);
         textSize(14);
-        text("Press C", cx, cy - 60);
+        text("Press C", cx, cy - 100);
       }
     }
   }
@@ -3053,6 +3235,83 @@ function drawRooftop() {
   
     interactPressed = false; // consume the press
   }
+
+  function ensureCrosswordFrame() {
+    let frame = document.getElementById("crosswordFrame");
+    if (!frame) {
+      frame = document.createElement("iframe");
+      frame.id = "crosswordFrame";
+      frame.src = "crossword.html"; // update path if needed
+      frame.style.position = "fixed";
+      frame.style.left = "0";
+      frame.style.top = "0";
+      frame.style.width = "100vw";
+      frame.style.height = "100vh";
+      frame.style.border = "none";
+      frame.style.zIndex = "9999";
+      frame.style.display = "none";
+      document.body.appendChild(frame);
+    }
+    return frame;
+  }
+  
+  function ensureCrosswordCloseBtn() {
+    let btn = document.getElementById("crosswordCloseBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "crosswordCloseBtn";
+      btn.textContent = "Done (Back to game)";
+      btn.style.position = "fixed";
+      btn.style.right = "18px";
+      btn.style.top = "18px";
+      btn.style.zIndex = "10000";
+      btn.style.padding = "10px 14px";
+      btn.style.borderRadius = "12px";
+      btn.style.border = "none";
+      btn.style.cursor = "pointer";
+      btn.style.fontSize = "14px";
+      btn.style.background = "rgba(0,0,0,0.65)";
+      btn.style.color = "white";
+      btn.style.display = "none";
+  
+      btn.addEventListener("click", () => {
+        exitCrosswordToPickleball(true); // treat as "finished"
+      });
+  
+      document.body.appendChild(btn);
+    }
+    return btn;
+  }
+  
+  function enterCrosswordFromPickleball() {
+    returnWorldIndex = worldIndex; // pickleball
+    mode = "crossword";
+  
+    const frame = ensureCrosswordFrame();
+    const btn = ensureCrosswordCloseBtn();
+  
+    const canvas = document.querySelector("canvas");
+    if (canvas) canvas.style.display = "none";
+  
+    frame.style.display = "block";
+    btn.style.display = "block";
+  }
+  
+  function exitCrosswordToPickleball(finished = false) {
+    const frame = document.getElementById("crosswordFrame");
+    const btn = document.getElementById("crosswordCloseBtn");
+    if (frame) frame.style.display = "none";
+    if (btn) btn.style.display = "none";
+  
+    const canvas = document.querySelector("canvas");
+    if (canvas) canvas.style.display = "block";
+  
+    mode = "game";
+    worldIndex = returnWorldIndex; // back to pickleball
+  
+    if (finished) onCrosswordDone();
+  }
+  
   
   function isPlayerNearPoint(px, py, radius) {
    
@@ -3128,10 +3387,21 @@ if (worldIndex === 2 && phoneOn && ftState === "win" && (key === "c" || key === 
   
     // Use chug to start shooter
     if (key === "f" || key === "F") {
-        if (worldIndex === PICKLEBALL_SCREEN_INDEX && mode === "game" && pickleballCanCheckPhone) {
+
+        if (worldIndex === PICKLEBALL_SCREEN_INDEX && mode === "game" && pickleballPhase === "killTimePrompt" && pickleballCanOpenCrossword) {
+            enterCrosswordFromPickleball();  // we’ll add this below
+            return;
+          }
+          if (
+            worldIndex === PICKLEBALL_SCREEN_INDEX &&
+            mode === "game" &&
+            pickleballCanCheckPhone &&
+            pickleballPhase === "waiting"
+          ) {
             findFriends();
             return;
           }
+          
       tryUseChugStartShooter();
     }
   
@@ -3141,37 +3411,39 @@ if (worldIndex === 2 && phoneOn && ftState === "win" && (key === "c" || key === 
     }
   
     // leave extra screen
-    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends" || mode === "wish")) {
+    if ((key === "q" || key === "Q") &&
+            (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends" || mode === "wish")) {
 
-        // If leaving FindFriends AFTER finding Halle, go to crossword
+        // ⭐ SPECIAL CASE: leaving FindFriends
         if (mode === "findFriends") {
-          if (ff.found && !crosswordShownOnce) {
-            crosswordShownOnce = true; // optional (remove if you want repeatable)
-            // go back to pickleball first (so returnWorldIndex is pickleball)
             mode = "game";
-            worldIndex = returnWorldIndex;
-      
-            // show a tiny “kill some time” bubble for ~1s then open crossword
-            // simplest: just open crossword immediately:
-            enterCrosswordFromPickleball();
+            worldIndex = returnWorldIndex; // should be pickleball
+
+            if (ff.found) {
+            // show: "lets kill some time while we wait for Halle"
+            startPickleballKillTimePrompt();
+            } else {
+            // quit early → normal waiting text
+            onEnterPickleball();
+            pickleballPhase = "waiting";
+            }
             return;
-          }
         }
-      
+
         // If leaving a wish, advance Tina/Kristen sequence
         if (mode === "wish") {
-          if (wish.who === "tina" && tinaSeq.stage === "tina_ready") {
+            if (wish.who === "tina" && tinaSeq.stage === "tina_ready") {
             tinaSeq.stage = "kristen_intro";
-          } else if (wish.who === "kristen" && tinaSeq.stage === "kristen_ready") {
+            } else if (wish.who === "kristen" && tinaSeq.stage === "kristen_ready") {
             tinaSeq.stage = "done";
-          }
+            }
         }
-      
+
+        // default behavior for other modes
         mode = "game";
         worldIndex = returnWorldIndex;
-      }
-      
-      
+        }
+
   }
   
 
@@ -3283,6 +3555,8 @@ if (worldIndex === 2) {
     if (tryInteractWithTable()) return;
     if (tryPickupFortniteLoot()) return;
     if (tryInteractWithFriend()) return; // ✅ ADD THIS
+    if (tryInteractWithPickleballHalle()) return;
+
 
 
 
