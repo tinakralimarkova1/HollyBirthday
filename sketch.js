@@ -319,6 +319,39 @@ let grillCandlePos = { x: 0, y: 0 };
 let grillCandleRevealed = false;
 
 
+// === Tina/Kristen FaceTime sequence ===
+const TINA_FT_CANDLE_ID = 500;          // reward candle after winning FaceTime
+const TINA_SCENE_CANDLE_SCALE = 1.0;
+
+let tinaSeq = {
+  stage: "ft_playing", // "ft_playing" | "candle" | "tina_ready" | "kristen_intro" | "kristen_ready" | "done"
+  tinaShown: false,
+  kristenShown: false,
+  splitShown: false
+};
+
+// Wish data for Tina/Kristen (used by wish screen)
+const WISH_DATA = {
+  tina: {
+    name: "Tina",
+    img: () => tinaImg,
+    wishText: "HAPPY BIRTHDAY!!!\nI love you so bad.\nYou’re literally everything.",
+  },
+  kristen: {
+    name: "Kristen",
+    img: () => kristenImg,
+    wishText: "HAPPY BDAYYYYY\nYou deserve the best day ever.\nLove you lots.",
+  },
+};
+
+// --- FaceTime WIN reward (collected on the phone win screen) ---
+const FT_WIN_CANDLE_ID = 550;   // unique
+let ftWinCandleCollected = false;
+
+const TINA_WISH_CANDLE_ID = 551;
+const KRISTEN_WISH_CANDLE_ID = 552;
+
+
 
 
 
@@ -585,8 +618,15 @@ function setup() {
     rect(cx, cy, cardW, cardH, 20);
   
     // pick friend data
-    const f = rooftopFriends.find(x => x.key === wish.who);
-    const title = f ? `${f.name}'s Birthday Wish` : "Birthday Wish";
+ // pick friend data (rooftop friends OR tina/kristen)
+const f = rooftopFriends.find(x => x.key === wish.who);
+const extra = WISH_DATA[wish.who];
+const name = f ? f.name : (extra ? extra.name : "Someone");
+const imgFn = f ? f.img : (extra ? extra.img : null);
+const msg = f ? f.wishText : (extra ? extra.wishText : "Happy birthday!!!");
+
+const title = `${name}'s Birthday Wish`;
+
   
     fill(255, 255, 255, 230);
     textAlign(CENTER, TOP);
@@ -595,35 +635,33 @@ function setup() {
   
     // friend image
     // friend image (keep aspect ratio)
-    if (f && f.img()) {
-    const img = f.img();
+    if (imgFn && imgFn()) {
+        const img = imgFn();
+      
+        const maxH = cardH * 0.42;
+        const maxW = cardW * 0.28;
+      
+        const ar = img.width / img.height;
+      
+        let drawH = maxH;
+        let drawW = drawH * ar;
+      
+        if (drawW > maxW) {
+          drawW = maxW;
+          drawH = drawW / ar;
+        }
+      
+        imageMode(CENTER);
+        image(img, width / 2, cy + cardH * 0.42, drawW, drawH);
+      }
+      
   
-    // set a max box the image is allowed to occupy
-    const maxH = cardH * 0.42;     // tweak (how tall on the card)
-    const maxW = cardW * 0.28;     // tweak (how wide on the card)
   
-    const ar = img.width / img.height; // 1668/2388 ~ 0.698
-  
-    // start by fitting height, then clamp to maxW if needed
-    let drawH = maxH;
-    let drawW = drawH * ar;
-  
-    if (drawW > maxW) {
-      drawW = maxW;
-      drawH = drawW / ar;
-    }
-  
-    imageMode(CENTER);
-    image(img, width / 2, cy + cardH * 0.42, drawW, drawH);
-  }
-  
-  
-    // wish text
-    fill(30, 30, 30, 210);
-    textAlign(CENTER, TOP);
-    textSize(18);
-    const msg = f ? f.wishText : "Happy birthday!!!";
-    text(msg, width / 2, cy + cardH * 0.62);
+      fill(255, 255, 255, 230);
+      textAlign(CENTER, TOP);
+      textSize(18);
+      text(msg, width / 2, cy + cardH * 0.62);
+      
   
     // candle
     const candle = candles.find(c => c.id === wish.candleId);
@@ -1377,7 +1415,7 @@ function drawRooftop() {
         x: () => width * 0.55,
         y: () => height * 0.68, // ✅ same level as Holly
         candleId: COBY_CANDLE_ID,
-        wishText: "Happy birthday!!\nYou are literally sunshine.\nProud of you always.",
+        wishText: "Happy Birthday my Holly Holly Bo Bolly! \nI love you so much dad you\’re the best thing ever and I love you my whole heart my perfect angel Holly! \nCHEERS TO 22 (taylor\’s version) ",
       },
       {
         key: "athena",
@@ -1387,7 +1425,7 @@ function drawRooftop() {
         x: () => width * 0.45,
         y: () => height * 0.68, // ✅
         candleId: ATHENA_CANDLE_ID,
-        wishText: "HAPPY BDAY!!\nYou make everything feel possible.\nLove you tons.",
+        wishText: "happy 22nd birthday to my half birthday twin! you will forever be in my contacts as Henry Wheeler just btw.\n I\’m so lucky to have known you for so long and to have seen you grow into the person you are today. now all that\’s left for us to do is to go to Disneyland together🤞 \nI hope you have enjoyed your day and that tonight treats us kindly \n(may we both be spared from the level of anguish we experienced with How to Apologize to a Cat on WikiHow during jackbox).\n love you lots!",
       },
       {
         key: "matthew",
@@ -1511,7 +1549,100 @@ function drawRooftop() {
       textSize(18);
       text("Press E", table.x(), table.y() - 220);
     }
+    drawTinaKristenSequence();
+
   }
+
+  function drawTinaKristenSequence() {
+    if (worldIndex !== 2) return;
+  
+    // ---- Stage: after win, show candle prompt text (white) ----
+    if (tinaSeq.stage === "candle") {
+      fill(255, 255, 255, 230);
+      textAlign(CENTER, TOP);
+      textSize(20);
+      text("You did it. Collect the candle (press C).", width * 0.65, height * 0.12);
+  
+      // once candle collected, Tina appears
+      const c = candles.find(x => x.id === TINA_FT_CANDLE_ID);
+      if (c && c.collected) {
+        tinaSeq.stage = "tina_ready";
+        tinaSeq.tinaShown = true;
+      }
+    }
+  
+    // ---- Stage: Tina appears, says happy birthday, press E -> wish screen ----
+    if (tinaSeq.stage === "tina_ready") {
+        drawPhone();
+      
+        // show Tina alone in the phone
+        const scr = getPhoneScreenRect();
+        if (tinaImg) {
+          imageMode(CORNER);
+          image(tinaImg, scr.x + 16, scr.y + 16, scr.w - 32, scr.h - 32);
+        }
+      
+        drawDialogueBubble(width * 0.70, height * 0.16, "Tina: happy birthday ❤️\nPress E");
+      }
+      
+  
+    // ---- After exiting Tina wish ----
+    if (tinaSeq.stage === "kristen_intro") {
+      drawDialogueBubble(width * 0.62, height * 0.16, "Tina: let's get Kristen on here\nPress E");
+    }
+  
+    // ---- Split screen: Kristen appears; E -> Kristen wish ----
+    if (tinaSeq.stage === "kristen_ready") {
+        // show the phone and split FaceTime inside it
+        drawPhone();
+        drawPhoneFaceTimeSplit(tinaImg, kristenImg);
+      
+        // prompt
+        drawDialogueBubble(width * 0.70, height * 0.16, "Kristen: happy birthday!!!\nPress E");
+      }
+      
+  
+    // ---- Done: prompt to continue to Fortnite ----
+    if (tinaSeq.stage === "done") {
+      drawDialogueBubble(width * 0.62, height * 0.16, "Tina: lets hop on Fortnite\n(continue to next screen →)");
+    }
+  }
+  
+  function drawDialogueBubble(cx, cy, msg) {
+    const pad = 18;
+    textSize(22);
+    textAlign(CENTER, CENTER);
+  
+    const lines = msg.split("\n");
+    const widest = Math.max(...lines.map(t => textWidth(t)));
+    const boxW = min(width * 0.9, widest + pad * 2);
+    const boxH = 70 + (lines.length - 1) * 22;
+  
+    const x = cx - boxW / 2;
+    const y = cy;
+  
+    noStroke();
+    fill(0, 0, 0, 140);
+    rect(x, y, boxW, boxH, 18);
+  
+    fill(255, 255, 255, 240);
+    text(msg, cx, y + boxH / 2);
+  }
+  
+
+  function onFaceTimeWin() {
+    // stop phone minigame view
+    ftActive = false;
+    phoneOn = false;
+  
+    // unlock Tina reward candle
+    const c = candles.find(x => x.id === TINA_FT_CANDLE_ID);
+    if (c) c.unlocked = true;
+  
+    tinaSeq.stage = "candle";
+    spawnConfetti(30);
+  }
+  
   
 
 
@@ -1605,6 +1736,43 @@ function drawRooftop() {
       expiresAt: millis() + visibleMs
     };
   }
+
+  function drawPhoneFaceTimeSplit(leftImg, rightImg) {
+    const scr = getPhoneScreenRect();
+  
+    // dark overlay inside phone
+    noStroke();
+    fill(0, 0, 0, 80);
+    rect(scr.x, scr.y, scr.w, scr.h, 22);
+  
+    // split line
+    fill(255, 255, 255, 70);
+    rect(scr.x + scr.w / 2 - 1.5, scr.y, 3, scr.h);
+  
+    const pad = 16;
+    const halfW = (scr.w - pad * 3) / 2;
+    const h = scr.h - pad * 2;
+  
+    // Tina left
+    if (leftImg) {
+      imageMode(CORNER);
+      image(leftImg, scr.x + pad, scr.y + pad, halfW, h);
+    }
+  
+    // Kristen right
+    if (rightImg) {
+      imageMode(CORNER);
+      image(rightImg, scr.x + pad * 2 + halfW, scr.y + pad, halfW, h);
+    }
+  
+    // tiny name labels
+    fill(255, 255, 255, 220);
+    textSize(14);
+    textAlign(LEFT, TOP);
+    text("Tina", scr.x + pad + 6, scr.y + pad + 6);
+    text("Kristen", scr.x + pad * 2 + halfW + 6, scr.y + pad + 6);
+  }
+  
   
   
   function updateFaceTimeGame() {
@@ -1612,10 +1780,20 @@ function drawRooftop() {
     if (ftState !== "playing") return;
   
     if (ftScore >= FT_TARGET) {
-      ftState = "win";
-      ftPopup = null;
-      return;
-    }
+        if (ftState !== "win") {
+          ftState = "win";
+          ftPopup = null;
+      
+          // unlock the WIN candle (collected on the win screen)
+          const wc = candles.find(x => x.id === FT_WIN_CANDLE_ID);
+          if (wc) wc.unlocked = true;
+      
+          spawnConfetti(25);
+        }
+        return;
+      }
+      
+      
   
     const now = millis();
   
@@ -1693,8 +1871,48 @@ function drawRooftop() {
       return; // don't draw popup
     }
     else if (ftState === "win") {
-        //tina message + candle 
-    }
+        // dim screen
+        noStroke();
+        fill(0, 0, 0, 160);
+        rect(scr.x, scr.y, scr.w, scr.h, 22);
+      
+        // card
+        const cardW = scr.w * 0.88;
+        const cardH = scr.h * 0.34;
+        const cardX = scr.x + (scr.w - cardW) / 2;
+        const cardY = scr.y + (scr.h - cardH) / 2;
+      
+        fill(255, 255, 255, 235);
+        rect(cardX, cardY, cardW, cardH, 18);
+      
+        fill(20);
+        textAlign(CENTER, TOP);
+        textSize(18);
+        text("Tina:", cardX + cardW / 2, cardY + 16);
+      
+        textSize(14);
+        fill(80);
+        text("ok fine you answered 🙄", cardX + cardW / 2, cardY + 44);
+        text("collect ur candle (press C)", cardX + cardW / 2, cardY + 66);
+      
+        // draw candle inside the card
+        const candle = candles.find(c => c.id === FT_WIN_CANDLE_ID);
+        const already = !!candle?.collected;
+      
+        if (candleImg && candle && candle.unlocked && !already) {
+          imageMode(CENTER);
+          image(candleImg, cardX + cardW / 2, cardY + cardH * 0.72, 70, 70);
+        } else {
+          fill(40, 140, 70);
+          textSize(14);
+          text("✅ collected", cardX + cardW / 2, cardY + cardH * 0.72);
+        }
+      
+        // no restart button on win
+        ftEndBtn = null;
+        return;
+      }
+      
   
     ftEndBtn = null;
   
@@ -2557,6 +2775,46 @@ function drawRooftop() {
                 unlocked: true,
                 scale: 1.0
               },
+
+              {
+                id: TINA_FT_CANDLE_ID,
+                screen: 2, // Tina scene worldIndex
+                x: () => width * 0.70,
+                y: () => height * 0.70,
+                collected: false,
+                unlocked: false,        // locked until FaceTime win
+                scale: TINA_SCENE_CANDLE_SCALE
+              },
+              {
+                id: FT_WIN_CANDLE_ID,
+                screen: 2,                // Tina scene (we draw it on top of the phone)
+                x: () => width * 0.23,     // will be overridden by the win screen draw, but fine
+                y: () => height * 0.55,
+                collected: false,
+                unlocked: false,
+                scale: 1.0
+              },
+              {
+                id: TINA_WISH_CANDLE_ID,
+                screen: WISH_SCREEN_INDEX,
+                x: () => width / 2,
+                y: () => height * 0.80,
+                collected: false,
+                unlocked: true,
+                scale: 1.0
+              },
+              {
+                id: KRISTEN_WISH_CANDLE_ID,
+                screen: WISH_SCREEN_INDEX,
+                x: () => width / 2,
+                y: () => height * 0.80,
+                collected: false,
+                unlocked: true,
+                scale: 1.0
+              },
+              
+              
+              
         
       
       
@@ -2678,6 +2936,25 @@ function drawRooftop() {
           return;
         }
       }
+
+    // --- FaceTime WIN candle collect (press C on win screen) ---
+if (worldIndex === 2 && phoneOn && ftState === "win" && (key === "c" || key === "C")) {
+    const wc = candles.find(c => c.id === FT_WIN_CANDLE_ID);
+    if (wc && wc.unlocked && !wc.collected) {
+      wc.collected = true;
+      candlesCollected += 1;
+      spawnConfetti(30);
+  
+      // now start the Tina/Kristen FaceTime sequence
+      phoneOn = false;
+      ftActive = false;
+  
+      // move into Tina appearing-in-phone sequence
+      tinaSeq.stage = "tina_ready";
+    }
+    return;
+  }
+  
       
 
     if (key === "e" || key === "E") {
@@ -2704,9 +2981,20 @@ function drawRooftop() {
   
     // leave extra screen
     if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame" || mode === "findFriends" || mode === "wish")) {
-      mode = "game";
-      worldIndex = returnWorldIndex;
-    }
+
+        // If leaving a wish, advance Tina/Kristen sequence
+        if (mode === "wish") {
+          if (wish.who === "tina" && tinaSeq.stage === "tina_ready") {
+            tinaSeq.stage = "kristen_intro";
+          } else if (wish.who === "kristen" && tinaSeq.stage === "kristen_ready") {
+            tinaSeq.stage = "done";
+          }
+        }
+      
+        mode = "game";
+        worldIndex = returnWorldIndex;
+      }
+      
   }
   
 
@@ -2766,6 +3054,39 @@ function drawRooftop() {
 
   function tryInteract() {
     if (mode !== "game") return;
+
+    // --- Tina/Kristen sequence interactions ---
+if (worldIndex === 2) {
+    // press E when Tina is ready -> open Tina wish
+    if (tinaSeq.stage === "tina_ready") {
+      returnWorldIndex = worldIndex;
+      mode = "wish";
+      worldIndex = WISH_SCREEN_INDEX;
+      wish.who = "tina";
+      wish.candleId = TINA_WISH_CANDLE_ID;
+      spawnConfetti(10);
+      return true;
+    }
+  
+    // after Tina wish, press E -> move to split call
+    if (tinaSeq.stage === "kristen_intro") {
+      tinaSeq.stage = "kristen_ready";
+      spawnConfetti(10);
+      return true;
+    }
+  
+    // press E during split -> open Kristen wish
+    if (tinaSeq.stage === "kristen_ready") {
+      returnWorldIndex = worldIndex;
+      mode = "wish";
+      worldIndex = WISH_SCREEN_INDEX;
+      wish.who = "kristen";
+      wish.candleId = KRISTEN_WISH_CANDLE_ID;
+      spawnConfetti(10);
+      return true;
+    }
+  }
+  
   
     if (tryInteractWithDesk()) return;
     if (tryInteractWithBookshelf()) return;
