@@ -122,16 +122,25 @@ let phoneOn = false;
 
 // --- FaceTime mini game ---
 let ftActive = false;
-let ftPopup = null; // {x,y,w,h, btn:{x,y,w,h}, expiresAt}
+let ftState = "playing"; // "playing" | "lose" | "win"
+let ftPopup = null;      // {x,y,w,h, pickup:{...}, hang:{...}, expiresAt}
 let ftNextSpawnAt = 0;
 
 let ftScore = 0;
 let ftMisses = 0;
 
-// timings (ms)
-const FT_VISIBLE_MS = 1200;           // how long popup stays
-const FT_SPAWN_GAP_MIN = 600;         // min delay between popups
-const FT_SPAWN_GAP_MAX = 1400;        // max delay between popups
+const FT_TARGET = 5;
+
+// random timing ranges (ms)
+const FT_VISIBLE_MIN = 500;
+const FT_VISIBLE_MAX = 1300;
+
+const FT_GAP_MIN = 350;
+const FT_GAP_MAX = 1200;
+
+// end screen button rect (computed each frame)
+let ftEndBtn = null;
+
 
 
 
@@ -663,12 +672,11 @@ function drawRooftop() {
     fill(255);
     textAlign(CENTER, CENTER);
     textSize(28);
-    text("Phone Screen (placeholder)", width / 2, height / 2);
+    text("Quick! Answer Tina's face time or she will go insane!!", width* 0.7, height * 0.3);
   }
 
 
   function getPhoneScreenRect() {
-    // MUST match your drawPhone() values
     const x = width * 0.1;
     const y = height * 0.09;
     const w = width * 0.26;
@@ -676,94 +684,193 @@ function drawRooftop() {
     return { x, y, w, h };
   }
   
+  
   function startFaceTimeGame() {
     ftScore = 0;
     ftMisses = 0;
     ftActive = true;
+    ftState = "playing";
     ftPopup = null;
-    ftNextSpawnAt = millis() + 400; // quick first spawn
+    ftEndBtn = null;
+    ftNextSpawnAt = millis() + random(250, 650);
   }
+  
+  function resetFaceTimeGameHard() {
+    // sends you back to “tap table again”
+    ftActive = false;
+    ftState = "playing";
+    ftPopup = null;
+    ftEndBtn = null;
+    ftScore = 0;
+    ftMisses = 0;
+    ftNextSpawnAt = 0;
+    phoneOn = false;
+  }
+  
+  
+  function winFaceTimeGame() {
+    // you can unlock a candle here later
+    ftActive = false;
+    ftPopup = null;
+    spawnConfetti(40);
+  }
+  
   
   function spawnFaceTimePopup() {
     const scr = getPhoneScreenRect();
   
-    // popup size relative to screen
-    const w = scr.w * 0.75;
-    const h = scr.h * 0.22;
+    // SMALLER popup (harder to click)
+    const w = scr.w * 0.55;
+    const h = scr.h * 0.12;
   
-    // random position inside screen (keep margins so it doesn't clip)
-    const pad = 12;
+    const pad = 16;
     const x = random(scr.x + pad, scr.x + scr.w - w - pad);
-    const y = random(scr.y + pad, scr.y + scr.h - h - pad);
+    const y = random(scr.y + pad + 48, scr.y + scr.h - h - pad);
   
-    // button inside popup
-    const btnW = w * 0.32;
-    const btnH = h * 0.32;
-    const btnX = x + w - btnW - 16;
-    const btnY = y + h - btnH - 16;
+    // SMALLER buttons
+    const btnW = w * 0.26;
+    const btnH = h * 0.42;
+    const btnY = y + h - btnH - 10;
+  
+    const hangX = x + 10;
+    const pickupX = x + w - btnW - 10;
+  
+    const visibleMs = random(FT_VISIBLE_MIN, FT_VISIBLE_MAX);
   
     ftPopup = {
       x, y, w, h,
-      btn: { x: btnX, y: btnY, w: btnW, h: btnH },
-      expiresAt: millis() + FT_VISIBLE_MS
+      hang:   { x: hangX,   y: btnY, w: btnW, h: btnH },
+      pickup: { x: pickupX, y: btnY, w: btnW, h: btnH },
+      expiresAt: millis() + visibleMs
     };
   }
   
+  
   function updateFaceTimeGame() {
     if (!ftActive) return;
+    if (ftState !== "playing") return;
+  
+    if (ftScore >= FT_TARGET) {
+      ftState = "win";
+      ftPopup = null;
+      return;
+    }
   
     const now = millis();
   
-    // if popup exists and expired → count as miss
     if (ftPopup && now > ftPopup.expiresAt) {
       ftPopup = null;
       ftMisses += 1;
-      ftNextSpawnAt = now + random(FT_SPAWN_GAP_MIN, FT_SPAWN_GAP_MAX);
+      ftNextSpawnAt = now + random(FT_GAP_MIN, FT_GAP_MAX);
     }
   
-    // spawn if none and time reached
     if (!ftPopup && now > ftNextSpawnAt) {
       spawnFaceTimePopup();
     }
   }
   
+  
   function drawFaceTimeGameUI() {
     if (!ftActive) return;
   
-    // HUD text near top-left of phone
     const scr = getPhoneScreenRect();
+  
+    // HUD
     fill(30, 30, 30, 220);
     textAlign(LEFT, TOP);
     textSize(14);
-    text(`Pickups: ${ftScore}   Misses: ${ftMisses}`, scr.x + 10, scr.y + 10);
+    text(`Pickups: ${ftScore}/${FT_TARGET}   Misses: ${ftMisses}`, scr.x + 10, scr.y + 10);
+  
+    // END SCREEN (lose / win)
+    if (ftState === "lose") {
+      // dim screen
+      noStroke();
+      fill(0, 0, 0, 160);
+      rect(scr.x, scr.y, scr.w, scr.h, 22);
+  
+      // card
+      const cardW = scr.w * 0.86;
+      const cardH = scr.h * 0.28;
+      const cardX = scr.x + (scr.w - cardW) / 2;
+      const cardY = scr.y + (scr.h - cardH) / 2;
+  
+      fill(255, 255, 255, 235);
+      rect(cardX, cardY, cardW, cardH, 18);
+  
+      // message
+      fill(20);
+      textAlign(CENTER, CENTER);
+      textSize(18);
+  
+      if (ftState === "lose") {
+        text("You just received a message from Tina: ", cardX + cardW / 2, cardY + cardH * 0.35);
+
+        fill(100)
+        text("\"so you want me to kms?\"", cardX + cardW / 2, cardY + cardH * 0.45);
+        textSize(13);
+        fill(120)
+        text("Game over. Try again.", cardX + cardW / 2, cardY + cardH * 0.60);
+      }
+
+
+  
+      // restart button
+      const btnW = cardW * 0.42;
+      const btnH = cardH * 0.22;
+      const btnX = cardX + (cardW - btnW) / 2;
+      const btnY = cardY + cardH * 0.68;
+  
+      ftEndBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+  
+      fill(58, 63, 159);
+      rect(btnX, btnY, btnW, btnH, 14);
+  
+      fill(255);
+      textSize(14);
+      text("Restart", btnX + btnW / 2, btnY + btnH / 2);
+  
+      return; // don't draw popup
+    }
+    else if (ftState === "win") {
+        //tina message + candle 
+    }
+  
+    ftEndBtn = null;
   
     // draw popup
     if (!ftPopup) return;
   
     // popup body
-    fill(255, 255, 255, 235);
-    rect(ftPopup.x, ftPopup.y, ftPopup.w, ftPopup.h, 18);
+    fill(0, 0, 0, 220);
+    rect(ftPopup.x, ftPopup.y, ftPopup.w, ftPopup.h, 16);
   
     // title
-    fill(40, 40, 40);
+    fill(255);
     textAlign(LEFT, TOP);
-    textSize(18);
-    text("FaceTime", ftPopup.x + 16, ftPopup.y + 14);
+    textSize(14);
+    text("FaceTime", ftPopup.x + 10, ftPopup.y + 8);
   
     // subtitle
-    fill(80, 80, 80);
-    textSize(13);
-    text("Incoming call…", ftPopup.x + 16, ftPopup.y + 42);
+    fill(230);
+    textSize(11);
+    text("Incoming call…", ftPopup.x + 10, ftPopup.y + 26);
   
-    // pickup button
-    fill(40, 200, 120);
-    rect(ftPopup.btn.x, ftPopup.btn.y, ftPopup.btn.w, ftPopup.btn.h, 14);
-  
+    // hang (red)
+    fill(230, 60, 60);
+    rect(ftPopup.hang.x, ftPopup.hang.y, ftPopup.hang.w, ftPopup.hang.h, 10);
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(14);
-    text("Pick up", ftPopup.btn.x + ftPopup.btn.w / 2, ftPopup.btn.y + ftPopup.btn.h / 2);
+    textSize(11);
+    text("Hang", ftPopup.hang.x + ftPopup.hang.w / 2, ftPopup.hang.y + ftPopup.hang.h / 2);
+  
+    // pickup (green)
+    fill(40, 200, 120);
+    rect(ftPopup.pickup.x, ftPopup.pickup.y, ftPopup.pickup.w, ftPopup.pickup.h, 10);
+    fill(255);
+    text("Pick", ftPopup.pickup.x + ftPopup.pickup.w / 2, ftPopup.pickup.y + ftPopup.pickup.h / 2);
   }
+  
+  
   
 
 
@@ -1002,18 +1109,40 @@ function drawRooftop() {
   }
 
   function mousePressed() {
-    if (!phoneOn || !ftActive || !ftPopup) return;
+    if (!phoneOn || !ftActive) return;
   
-    const b = ftPopup.btn;
-    if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
-      // success!
+    const inside = (r) =>
+      mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+  
+    // If on end screen, only restart button works
+    if (ftState === "lose" || ftState === "win") {
+      if (ftEndBtn && inside(ftEndBtn)) {
+        // restart should make you “start over” from the table again
+        resetFaceTimeGameHard();
+      }
+      return;
+    }
+  
+    if (!ftPopup) return;
+  
+    // clicked hang up => instant lose screen
+    if (inside(ftPopup.hang)) {
+      ftState = "lose";
+      ftPopup = null;
+      return;
+    }
+  
+    // clicked pickup => progress
+    if (inside(ftPopup.pickup)) {
       ftScore += 1;
-      spawnConfetti(15);
+      spawnConfetti(10);
   
       ftPopup = null;
-      ftNextSpawnAt = millis() + random(FT_SPAWN_GAP_MIN, FT_SPAWN_GAP_MAX);
+      ftNextSpawnAt = millis() + random(FT_GAP_MIN, FT_GAP_MAX);
     }
   }
+  
+  
   
 
   function tryInteract() {
@@ -1230,19 +1359,16 @@ function drawRooftop() {
   }
   
   
-  function tryInteractWithTable(){
+  function tryInteractWithTable() {
     if (worldIndex !== table.screen) return false;
   
     if (isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
-
-        phoneOn = true;
-        startFaceTimeGame();
-        return true;
+      phoneOn = true;
+      startFaceTimeGame();
+      return true;
     }
-  
     return false;
   }
-  
   
   
   
