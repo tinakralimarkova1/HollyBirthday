@@ -335,7 +335,7 @@ const WISH_DATA = {
   tina: {
     name: "Tina",
     img: () => tinaImg,
-    wishText: "HAPPY BIRTHDAY!!!\nI love you so bad.\nYou’re literally everything.",
+    wishText: "HAPPY BIRTHDAY!!!\n I wish you the best health, adventures, special moments, and memories.\n I hope you have an amazing day!\nYou’re literally everything.",
   },
   kristen: {
     name: "Kristen",
@@ -348,7 +348,14 @@ const WISH_DATA = {
 WISH_DATA.halle = {
     name: "Halle",
     img: () => halleImg,
-    wishText: "HAPPY BIRTHDAYYYYY 🫶\nmiss you and love you.\nlet’s play!!!"
+    wishText: "Happy birthday Pookie!\nThe big 22 what an exciting year! The world is your oyster! So many people to meet,\n places to see, smoothies to drink and I can’t wait to hear about them all. \nFollow your heart and whatever sets your soul ablaze. Je t'aime~ Santé!"
+  };
+  
+
+  WISH_DATA.finn = {
+    name: "Finn",
+    img: () => finnImg,
+    wishText: "bark bark bark"
   };
   
 
@@ -385,6 +392,29 @@ const CROSSWORD_CANDLE_2 = 611;
 
 // Halle wish candle id
 const HALLE_WISH_CANDLE_ID = 612;
+
+// === Final cake scene ===
+const CAKE_SCREEN_INDEX = 5;     // last worldIndex screen
+let cakeImg, finnImg;
+
+const CAKE_INTERACT_RADIUS = 220;
+const FINN_INTERACT_RADIUS = 170;
+
+let cakeObj = {
+  screen: CAKE_SCREEN_INDEX,
+  x: () => width * 0.52,
+  y: () => height * 0.78
+};
+
+let finn = {
+  screen: CAKE_SCREEN_INDEX,
+  x: () => width * 0.15,
+  y: () => height * 0.72
+};
+
+// Finn wish candle
+const FINN_WISH_CANDLE_ID = 700;
+
 
 
 
@@ -481,6 +511,11 @@ function preload() {
     // candles
     candleImg = loadImage("assets/General/Candle.png");
 
+    // final scene assets
+cakeImg = loadImage("assets/Basement/cake.png");   // <-- adjust folder if needed
+finnImg = loadImage("assets/Basement/Finn.png");   // <-- adjust folder if needed
+
+
 
 
   }
@@ -546,6 +581,12 @@ function setup() {
         drawWishScreen();
         return;
       }
+
+      if (mode === "ending") {
+        drawEndingScreen();
+        return;
+      }
+            
       
       
     
@@ -554,6 +595,56 @@ function setup() {
   
     drawGame();
   }
+
+  function drawEndingScreen() {
+    // same vibe as landing page
+    background(142, 149, 244);
+  
+    if (frameCount % 10 === 0) spawnConfetti(CONFETTI_RATE);
+  
+    for (let i = confetti.length - 1; i >= 0; i--) {
+      confetti[i].update();
+      confetti[i].draw();
+      if (confetti[i].offscreen()) confetti.splice(i, 1);
+    }
+  
+    // “happy birthday” text
+    fill(255, 255, 255, 235);
+    textAlign(CENTER, CENTER);
+    textSize(64);
+    text("happy birthday", width / 2, height / 2);
+  }
+
+  function tryInteractWithFinn() {
+    if (mode !== "game") return false;
+    if (worldIndex !== CAKE_SCREEN_INDEX) return false;
+  
+    if (isPlayerNearPoint(finn.x(), finn.y(), FINN_INTERACT_RADIUS)) {
+      returnWorldIndex = worldIndex;
+      mode = "wish";
+      worldIndex = WISH_SCREEN_INDEX;
+  
+      wish.who = "finn";
+      wish.candleId = FINN_WISH_CANDLE_ID;
+  
+      spawnConfetti(10);
+      return true;
+    }
+    return false;
+  }
+  
+  function tryInteractWithCake() {
+    if (mode !== "game") return false;
+    if (worldIndex !== CAKE_SCREEN_INDEX) return false;
+  
+    if (isPlayerNearPoint(cakeObj.x(), cakeObj.y(), CAKE_INTERACT_RADIUS)) {
+      mode = "ending";
+      spawnConfetti(60);
+      return true;
+    }
+    return false;
+  }
+  
   
   
   
@@ -622,6 +713,10 @@ function setup() {
     else if (idx === 4){
         drawPickleball();
     }
+    else if (idx === CAKE_SCREEN_INDEX) {
+        drawCakeScene();
+      }
+      
     
     else {
       drawGenericWorld(idx);
@@ -648,6 +743,73 @@ function setup() {
     textSize(18);
     text(`Screen ${idx}`, width / 2, 16);
   }
+
+  function drawCakeScene() {
+    background(142, 149, 244);
+  
+    // optional: keep your “floor” look
+    noStroke();
+    fill(255, 255, 255, 90);
+    rect(0, height * 0.75, width, height * 0.25);
+  
+    // title label
+    fill(255, 255, 255, 160);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    text("Cake Time", width / 2, 16);
+  
+    // draw cake
+    if (cakeImg) {
+      const cw = width * 0.38;
+      const ch = cw * (cakeImg.height / cakeImg.width);
+      imageMode(CENTER);
+      image(cakeImg, cakeObj.x(), cakeObj.y(), cw, ch);
+    }
+  
+    // draw Finn
+    if (finnImg) {
+      const targetH = 420;
+      const targetW = targetH * (finnImg.width / finnImg.height);
+      imageMode(CENTER);
+      image(finnImg, finn.x(), finn.y(), targetW, targetH);
+    }
+  
+    // draw ALL friends (you already have these images)
+    const people = [
+      { img: cobyImg,    x: width * 0.28, y: height * 0.68, name: "Coby" },
+      { img: athenaImg,  x: width * 0.40, y: height * 0.68, name: "Athena" },
+      { img: matthewImg, x: width * 0.52, y: height * 0.68, name: "Matthew" },
+      { img: tinaImg,    x: width * 0.64, y: height * 0.68, name: "Tina" },
+      { img: kristenImg, x: width * 0.76, y: height * 0.68, name: "Kristen" },
+      { img: halleImg,   x: width * 0.88, y: height * 0.68, name: "Halle" },
+    ];
+  
+    for (const p of people) {
+      if (!p.img) continue;
+      const targetH = 520;
+      const targetW = targetH * (p.img.width / p.img.height);
+      imageMode(CENTER);
+      image(p.img, p.x, p.y, targetW, targetH);
+    }
+  
+    // prompts
+    if (mode === "game") {
+      if (isPlayerNearPoint(finn.x(), finn.y(), FINN_INTERACT_RADIUS)) {
+        fill(255);
+        textAlign(CENTER, BOTTOM);
+        textSize(16);
+        text("Press E", finn.x(), finn.y() - 220);
+      }
+  
+      if (isPlayerNearPoint(cakeObj.x(), cakeObj.y(), CAKE_INTERACT_RADIUS)) {
+        fill(255);
+        textAlign(CENTER, BOTTOM);
+        textSize(16);
+        text("Press E", cakeObj.x(), cakeObj.y() - 180);
+      }
+    }
+  }
+  
 
   function drawWishScreen() {
     background(142, 149, 244);
@@ -852,7 +1014,7 @@ const title = `${name}'s Birthday Wish`;
       const boxY = height * 0.18;
   
       noStroke();
-      fill(0, 0, 0, 120);
+      fill(0, 0, 0);
       rect(boxX, boxY, boxW, boxH, 18);
   
       fill(255, 255, 255, 240);
@@ -892,7 +1054,7 @@ const title = `${name}'s Birthday Wish`;
     const boxY = height * 0.18;
   
     noStroke();
-    fill(0, 0, 0, 120);
+    fill(0, 0, 0);
     rect(boxX, boxY, boxW, boxH, 18);
   
     fill(255, 255, 255, 240);
@@ -2855,9 +3017,14 @@ function drawRooftop() {
   function handleWorldTransitions() {
     // Walk off right edge => next screen
     if (holly.x > width + holly.w / 2) {
-      worldIndex += 1;
-      holly.x = -holly.w / 2;
-    }
+        if (worldIndex >= CAKE_SCREEN_INDEX) {
+          holly.x = width + holly.w / 2; // clamp on last screen
+        } else {
+          worldIndex += 1;
+          holly.x = -holly.w / 2;
+        }
+      }
+      
   
     // Walk off left edge => previous screen
     if (holly.x < -holly.w / 2) {
@@ -3149,6 +3316,16 @@ function drawRooftop() {
     unlocked: true,
     scale: 1.0
   },
+  {
+    id: FINN_WISH_CANDLE_ID,
+    screen: WISH_SCREEN_INDEX,
+    x: () => width / 2,
+    y: () => height * 0.80,
+    collected: false,
+    unlocked: true,
+    scale: 1.0
+  },
+  
   
               
               
@@ -3556,6 +3733,9 @@ if (worldIndex === 2) {
     if (tryPickupFortniteLoot()) return;
     if (tryInteractWithFriend()) return; // ✅ ADD THIS
     if (tryInteractWithPickleballHalle()) return;
+    if (tryInteractWithFinn()) return;
+    if (tryInteractWithCake()) return;
+
 
 
 
