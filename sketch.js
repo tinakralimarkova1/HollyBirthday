@@ -97,6 +97,17 @@ let rooftopPlants = [];           // plant objects
 const ROOFTOP_PLANT_CANDLE_ID = 200; // candle hidden behind plant
 
 
+const GRILL_GAME_SCREEN_INDEX = 103;    // unique id
+const GRILL_INTERACT_RADIUS = 180;
+
+let grill = {
+  screen: 1, // rooftop worldIndex in your current mapping
+  x: () => width * 0.65,
+  y: () => height * 0.70
+};
+
+
+
 
 // candles
 // bedroom (3): mav, bookshelf, desk
@@ -188,6 +199,11 @@ function setup() {
         drawBookshelfScreen();
         return;
       }
+    if (mode === "grillGame") {
+        drawGrillGame();
+        return;
+      }
+    
     
   
     drawGame();
@@ -484,6 +500,15 @@ function drawRooftop() {
     drawCloud(width * 0.5, height * 0.15);
     drawCloud(width * 0.75, height * 0.25);
 
+
+    if (mode === "game" && isPlayerNearPoint(grill.x(), grill.y(), GRILL_INTERACT_RADIUS)) {
+        fill(230, 60, 60);
+        textAlign(CENTER, BOTTOM);
+        textSize(18);
+        text("Press E", grill.x(), grill.y() - 160);
+      }
+      
+
     
     // --- LABEL ---
     fill(255, 255, 255, 160);
@@ -543,6 +568,23 @@ function drawRooftop() {
       if (p.shakeTimer > 0) p.shakeTimer--;
     }
   }
+
+  function drawGrillGame() {
+    background(142, 149, 244);
+  
+    fill(255, 255, 255, 220);
+    textAlign(CENTER, CENTER);
+    textSize(36);
+    text("Grill Mini Game", width / 2, height / 2 - 20);
+  
+    textSize(16);
+    text("Press Q to return", width / 2, height / 2 + 30);
+  
+    // you can draw the grill image here too if you want:
+    // imageMode(CENTER);
+    // image(grillImg, width/2, height*0.65, width*0.25, height*0.45);
+  }
+  
   
 
 
@@ -777,7 +819,7 @@ function drawRooftop() {
     }
   
     // leave extra screen
-    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf")) {
+    if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame")) {
         mode = "game";
         worldIndex = returnWorldIndex;
       }
@@ -791,6 +833,8 @@ function drawRooftop() {
     if (tryInteractWithBookshelf()) return;
     if (tryInteractWithMav()) return;
     if (tryInteractWithRooftopPlants()) return;
+    if (tryInteractWithGrill()) return;        
+
 
   }
   
@@ -958,7 +1002,7 @@ function drawRooftop() {
         }
   
         if (p.isCorrect) {
-          // slide like mav
+          // slide
           p.moved = true;
           p.offsetX = PLANT_SLIDE_DIST;
   
@@ -978,6 +1022,22 @@ function drawRooftop() {
   
     return false;
   }
+
+  function tryInteractWithGrill() {
+    // grill is on rooftop (worldIndex 0 in your current mapping)
+    if (worldIndex !== grill.screen) return false;
+  
+    if (isPlayerNearPoint(grill.x(), grill.y(), GRILL_INTERACT_RADIUS)) {
+      returnWorldIndex = worldIndex;
+      mode = "grillGame";
+      worldIndex = GRILL_GAME_SCREEN_INDEX; // optional but consistent
+      spawnConfetti(12);
+      return true;
+    }
+  
+    return false;
+  }
+  
   
   
   
