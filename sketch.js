@@ -142,6 +142,114 @@ const FT_GAP_MAX = 1200;
 let ftEndBtn = null;
 
 
+// fortnite scene
+
+let fortniteBGImg;
+let chestImg;
+let chugSplashImg;
+let holoImg;
+
+
+
+const FORTNITE_SCREEN_INDEX = 3;
+
+const CHEST_INTERACT_RADIUS = 250;
+const CHEST_HOLD_MS = 3000;
+
+let chest = {
+  screen: FORTNITE_SCREEN_INDEX,
+  x: () => width * 0.45,          // CENTERED
+  y: () => height * 0.82,        // adjust if your floor is different
+  opened: false,
+
+  // hold-to-open
+  holdMs: 0,
+  holding: false
+};
+
+let chugSplash = {
+  screen: FORTNITE_SCREEN_INDEX,
+  x: () => width * 0.65,
+  y: () => height * 0.85,
+  visible: false
+};
+
+let holo = {
+  screen: FORTNITE_SCREEN_INDEX,
+  x: () => width * 0.75,
+  y: () => height * 0.85,
+  visible: false
+};
+
+// optional: candle that pops out of chest (use your existing candle system)
+const FORTNITE_CANDLE_ID = 300; // pick any unique id
+
+// fortnite mechanics 
+// ===== Fortnite loot pickup + shooter =====
+let hasHolo = false;
+let hasChug = false;
+
+const LOOT_PICKUP_RADIUS = 280;
+
+// shooter game
+let enemyImgs = [];
+let gunImg;
+
+// --- holly shield/health ---
+let hollyShield = 100;
+let hollyHealth = 100;
+
+const HOLLY_MAX_SHIELD = 100;
+const HOLLY_MAX_HEALTH = 100;
+
+const BULLET_DMG = 1;         // holly bullets damage (4 hits per enemy)
+const ENEMY_BULLET_DMG = 14;  // enemy bullet damage to holly
+
+
+// enemy bullets
+let enemyBullets = [];
+let nextEnemyShotAt = 0;
+
+let shooterActive = false;
+let shooterState = "playing"; // "playing" | "win"
+let shooterEndBtn = null;
+
+let bullets = [];
+let enemies = [];
+let nextEnemySpawnAt = 0;
+
+const ENEMY_HP = 20;
+const ENEMY_SPEED_MIN = 3.2;
+const ENEMY_SPEED_MAX = 5.2;
+
+const BULLET_SPEED = 14;
+const BULLET_RADIUS = 6;
+
+// win condition
+const ENEMY_LIMIT = 4;
+let enemiesSpawned = 0;
+let enemiesKilled = 0;
+
+const ENEMY_SHOOT_GAP_MIN = 700;
+const ENEMY_SHOOT_GAP_MAX = 1200;
+
+const ENEMY_BULLET_SPEED = 9;
+const ENEMY_BULLET_RADIUS = 6;
+
+// two reward candles after shooter
+const FORTNITE_REWARD_CANDLE_1 = 301;
+const FORTNITE_REWARD_CANDLE_2 = 302;
+
+let victoryImg;
+let showVictory = false;
+let victoryUntil = 0;
+const VICTORY_SHOW_MS = 2500;
+
+
+
+
+
+
 
 
 // candles
@@ -187,9 +295,26 @@ function preload() {
     grillImg = loadImage("assets/Grill/grill.png");
 
 
+
     //tina scene
 
     tableImg = loadImage("assets/TinaGame/table.png");
+
+    // fortnite scene
+    fortniteBGImg = loadImage("assets/Fortnite/fortniteBG.png.jpg");
+    chestImg = loadImage("assets/Fortnite/Chest1.png.webp");
+    chugSplashImg = loadImage("assets/Fortnite/chugSplash.png");
+    holoImg = loadImage("assets/Fortnite/holo.png");
+    gunImg = loadImage("assets/Fortnite/holo.png");
+    victoryImg = loadImage("assets/Fortnite/victory.png");
+
+
+    enemyImgs = [
+        loadImage("assets/Fortnite/enemy1.png"),
+        loadImage("assets/Fortnite/enemy1.png"),
+        loadImage("assets/Fortnite/enemy1.png"),
+        loadImage("assets/Fortnite/enemy1.png")
+      ];
 
 
 
@@ -245,6 +370,7 @@ function setup() {
       }
     
     
+    
   
     drawGame();
   }
@@ -280,12 +406,25 @@ function setup() {
     holly.update();
     holly.draw();
 
+    if (worldIndex === FORTNITE_SCREEN_INDEX && shooterActive) {
+    drawHollyGun();           // ✅ gun on top of Holly
+    }
+
+    drawVictory();
+
+    if (worldIndex === FORTNITE_SCREEN_INDEX) {
+    updateFortniteChestHold();
+    updateShooterGame();
+}
+
+  
     tryCollectCandles(worldIndex);
   
     handleWorldTransitions();
     drawHUD();
-    drawCandleHUD();  
+    drawCandleHUD();
   }
+  
 
   function drawWorld(idx) {
     if (idx === 0) {
@@ -296,6 +435,9 @@ function setup() {
     }
     else if (idx === 2){
         drawTinaGame();
+    }
+    else if (idx === 3){
+        drawFortniteScene();
     }
     
     else {
@@ -871,9 +1013,600 @@ function drawRooftop() {
   }
   
   
+
+  function drawFortniteScene() {
+    background(142, 149, 244);
+  
+    // background
+    if (fortniteBGImg) {
+      imageMode(CENTER);
+      image(fortniteBGImg, width / 2, height / 2, width, height);
+    }
+  
+    // floor
+    noStroke();
+    fill(224, 209, 168);
+    rect(0, height * 0.9, width, height * 0.1);
+  
+    // chest (no hover)
+    if (chestImg) {
+      imageMode(CENTER);
+      const cw = width * 0.20;
+      const chh = cw * (chestImg.height / chestImg.width);
+      image(chestImg, chest.x(), chest.y(), cw, chh);
+    }
+  
+    // loot appears after open
+    if (chest.opened) {
+      if (chugSplashImg && chugSplash.visible && !hasChug) {
+        imageMode(CENTER);
+        const sw = width * 0.10;
+        const sh = sw * (chugSplashImg.height / chugSplashImg.width);
+        image(chugSplashImg, chugSplash.x(), chugSplash.y(), sw, sh);
+      }
+  
+      if (holoImg && holo.visible && !hasHolo) {
+        imageMode(CENTER);
+        const hw = width * 0.14;
+        const hh = hw * (holoImg.height / holoImg.width);
+        image(holoImg, holo.x(), holo.y(), hw, hh);
+      }
+    }
+  
+    // chest hold prompt + bar
+    if (mode === "game" && !chest.opened && isPlayerNearPoint(chest.x(), chest.y(), CHEST_INTERACT_RADIUS)) {
+      fill(230, 60, 60);
+      textAlign(CENTER, BOTTOM);
+      textSize(18);
+      text("Hold E to open", chest.x(), chest.y() - 120);
+      drawChestProgressBar();
+    }
+  
+    // loot pickup prompts
+    drawFortniteLootPrompts();
+  
+    // inventory UI
+    drawFortniteInventory();
+  
+    // shooter overlay (if active)
+    if (shooterActive) {
+      drawShooterOverlay();
+    }
+  
+    // label
+    fill(255, 255, 255, 160);
+    textAlign(CENTER, TOP);
+    textSize(18);
+    text("Fortnite", width / 2, 16);
+  }
+
+  function drawFortniteLootPrompts() {
+    if (!chest.opened) return;
+  
+    // prompt near chug splash
+    if (chugSplash.visible && !hasChug && isPlayerNearPoint(chugSplash.x(), chugSplash.y(), LOOT_PICKUP_RADIUS)) {
+      fill(230, 60, 60);
+      textAlign(CENTER, BOTTOM);
+      textSize(16);
+      text("Press E to pick up Chug Splash", chugSplash.x(), chugSplash.y() - 60);
+    }
+  
+    // prompt near holo
+    if (holo.visible && !hasHolo && isPlayerNearPoint(holo.x(), holo.y(), LOOT_PICKUP_RADIUS)) {
+      fill(230, 60, 60);
+      textAlign(CENTER, BOTTOM);
+      textSize(16);
+      text("Press E to pick up Holo", holo.x(), holo.y() - 60);
+    }
+  
+    // once you have chug, show how to use it
+    if (hasChug && !shooterActive) {
+      fill(255, 255, 255, 200);
+      textAlign(LEFT, TOP);
+      textSize(14);
+      text("Press F to use Chug Splash", 16, 48);
+    }
+  }
+  
+  function drawFortniteInventory() {
+    // tiny text inventory in top-left
+    fill(0, 0, 0, 120);
+    noStroke();
+    rect(12, 72, 210, 58, 12);
+  
+    fill(255, 255, 255, 230);
+    textAlign(LEFT, TOP);
+    textSize(14);
+    text(`Holo: ${hasHolo ? "YES" : "NO"}`, 22, 82);
+    text(`Chug: ${hasChug ? "YES" : "NO"}`, 22, 102);
+  }
+  
+  function tryPickupFortniteLoot() {
+    if (worldIndex !== FORTNITE_SCREEN_INDEX) return false;
+    if (!chest.opened) return false;
+  
+    // pick up chug
+    if (chugSplash.visible && !hasChug && isPlayerNearPoint(chugSplash.x(), chugSplash.y(), LOOT_PICKUP_RADIUS)) {
+      hasChug = true;
+      chugSplash.visible = false;
+      spawnConfetti(12);
+      return true;
+    }
+  
+    // pick up holo
+    if (holo.visible && !hasHolo && isPlayerNearPoint(holo.x(), holo.y(), LOOT_PICKUP_RADIUS)) {
+      hasHolo = true;
+      holo.visible = false;
+      spawnConfetti(12);
+      return true;
+    }
+  
+    return false;
+  }
+  
+  function tryUseChugStartShooter() {
+    if (worldIndex !== FORTNITE_SCREEN_INDEX) return false;
+    if (!hasChug) return false;
+    if (shooterActive) return false;
+  
+    // start shooter
+    hasChug = false; // consume it
+    startShooterGame();
+    spawnConfetti(18);
+    return true;
+  }
+  
   
 
+  function updateFortniteChestHold() {
+    if (worldIndex !== FORTNITE_SCREEN_INDEX) return;
+    if (mode !== "game") return;
+    if (chest.opened) return;
+  
+    const near = isPlayerNearPoint(chest.x(), chest.y(), CHEST_INTERACT_RADIUS);
+  
+    // must be near AND holding E
+    if (near && keyIsDown(69)) { // 69 = 'E'
+      chest.holding = true;
+      chest.holdMs += deltaTime;
+  
+      if (chest.holdMs >= CHEST_HOLD_MS) {
+        openFortniteChest();
+      }
+    } else {
+      // not holding / walked away -> decay or reset
+      chest.holding = false;
+      chest.holdMs = max(0, chest.holdMs - deltaTime * 1.5); // smooth fallback
+    }
+  }
 
+  
+  function openFortniteChest() {
+    chest.opened = true;
+    chest.holdMs = CHEST_HOLD_MS;
+    spawnConfetti(25);
+  
+    // show loot
+    chugSplash.visible = true;
+    holo.visible = true;
+  
+    // unlock the candle that pops out
+    const c = candles.find(c => c.id === FORTNITE_CANDLE_ID);
+    if (c) c.unlocked = true;
+  }
+  
+  
+  function startShooterGame() {
+    shooterActive = true;
+    shooterState = "playing";
+    shooterEndBtn = null; // not used anymore
+  
+    bullets = [];
+    enemies = [];
+    enemyBullets = [];
+  
+    enemiesSpawned = 0;
+    enemiesKilled = 0;
+  
+    // reset holly stats for the shooter
+    hollyShield = HOLLY_MAX_SHIELD;
+    hollyHealth = HOLLY_MAX_HEALTH;
+  
+    nextEnemySpawnAt = millis() + 600;
+    nextEnemyShotAt = millis() + random(ENEMY_SHOOT_GAP_MIN, ENEMY_SHOOT_GAP_MAX);
+  }
+
+  function spawnEnemy() {
+    const h = 300;
+    const w = 200;
+  
+    enemies.push({
+      x: -50,
+      y: height * 0.75,
+      w,
+      h,
+      hp: ENEMY_HP,
+      speed: random(ENEMY_SPEED_MIN, ENEMY_SPEED_MAX),
+      skinIndex: enemiesSpawned % 4
+    });
+  }
+  
+  
+  function updateShooterGame() {
+    if (!shooterActive) return;
+    if (worldIndex !== FORTNITE_SCREEN_INDEX) return;
+    if (shooterState !== "playing") return;
+  
+    const now = millis();
+  
+    // spawn enemies
+    if (enemiesSpawned < ENEMY_LIMIT && now >= nextEnemySpawnAt) {
+      spawnEnemy();
+      enemiesSpawned++;
+      nextEnemySpawnAt = now + random(900, 1400);
+    }
+  
+    // holly bullets / enemies movement
+    updateBullets();
+    updateEnemies();
+    handleBulletEnemyCollisions();
+  
+    // enemies shooting + bullets hitting holly
+    updateEnemyShooting();
+    updateEnemyBullets();
+  
+    // WIN: unlock 2 reward candles, stop shooter (no end screen)
+    if (enemiesSpawned >= ENEMY_LIMIT && enemiesKilled >= ENEMY_LIMIT) {
+      shooterState = "win";
+      shooterActive = false;
+  
+      const c1 = candles.find(c => c.id === FORTNITE_REWARD_CANDLE_1);
+      const c2 = candles.find(c => c.id === FORTNITE_REWARD_CANDLE_2);
+      if (c1) c1.unlocked = true;
+      if (c2) c2.unlocked = true;
+
+      showVictory = true;
+      victoryUntil = millis() + VICTORY_SHOW_MS;
+
+  
+      spawnConfetti(35);
+    }
+  }
+
+  function drawVictory() {
+    if (!showVictory) return;
+  
+    if (millis() > victoryUntil) {
+      showVictory = false;
+      return;
+    }
+  
+    if (!victoryImg) return;
+  
+    push();
+    imageMode(CENTER);
+  
+    // subtle dark overlay behind it
+    noStroke();
+    fill(0, 0, 0, 120);
+    rect(0, 0, width, height);
+  
+    const w = width * 0.7;
+    const h = w * (victoryImg.height / victoryImg.width);
+    image(victoryImg, width / 2, height / 2, w, h);
+    pop();
+  }
+  
+  
+  
+
+  
+  function shootBullet() {
+    // bullets shoot in facing direction
+    bullets.push({
+      x: holly.x,
+      y: holly.y - 20,
+      r: BULLET_RADIUS,
+      vx: holly.facing * BULLET_SPEED
+    });
+  }
+  
+  function updateBullets() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      bullets[i].x += bullets[i].vx;
+  
+      // remove offscreen
+      if (bullets[i].x < -50 || bullets[i].x > width + 50) {
+        bullets.splice(i, 1);
+      }
+    }
+  }
+  
+  function updateEnemies() {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      e.x += e.speed; // move from left -> right
+  
+      // if you want "lose" later, this is where you'd detect reaching Holly
+      // for now: just keep them on screen
+      if (e.x > width + 80) {
+        enemies.splice(i, 1);
+      }
+    }
+  }
+  
+  function handleBulletEnemyCollisions() {
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+  
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
+  
+        const hit =
+          b.x >= e.x - e.w / 2 &&
+          b.x <= e.x + e.w / 2 &&
+          b.y >= e.y - e.h / 2 &&
+          b.y <= e.y + e.h / 2;
+  
+        if (hit) {
+          bullets.splice(bi, 1);
+  
+          e.hp -= BULLET_DMG;
+          spawnConfetti(3);
+  
+          if (e.hp <= 0) {
+            enemies.splice(ei, 1);
+            enemiesKilled += 1;
+            spawnConfetti(10);
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  function spawnEnemyBullet(fromEnemy) {
+    // shoot towards holly
+    const dx = holly.x - fromEnemy.x;
+    const dy = (holly.y - 20) - fromEnemy.y;
+    const mag = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
+  
+    enemyBullets.push({
+      x: fromEnemy.x,
+      y: fromEnemy.y - 10,
+      vx: (dx / mag) * ENEMY_BULLET_SPEED,
+      vy: (dy / mag) * ENEMY_BULLET_SPEED,
+      r: ENEMY_BULLET_RADIUS
+    });
+  }
+  
+  function updateEnemyShooting() {
+    const now = millis();
+    if (enemies.length === 0) return;
+  
+    if (now >= nextEnemyShotAt) {
+      // pick a random alive enemy to shoot
+      const shooter = random(enemies);
+      spawnEnemyBullet(shooter);
+  
+      nextEnemyShotAt = now + random(ENEMY_SHOOT_GAP_MIN, ENEMY_SHOOT_GAP_MAX);
+    }
+  }
+  
+  function updateEnemyBullets() {
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      const b = enemyBullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+  
+      // offscreen
+      if (b.x < -80 || b.x > width + 80 || b.y < -80 || b.y > height + 80) {
+        enemyBullets.splice(i, 1);
+        continue;
+      }
+  
+      // hit holly (use a generous radius)
+      const hx = holly.x;
+      const hy = holly.y - 30;
+      if (dist(hx, hy, b.x, b.y) < 55) {
+        enemyBullets.splice(i, 1);
+        applyDamageToHolly(ENEMY_BULLET_DMG);
+      }
+    }
+  }
+
+  function drawHollyGun() {
+    if (!gunImg) return;
+  
+    // tweak offsets until it looks like she's holding it
+    const gx = holly.x + (holly.facing === 1 ? 55 : -55);
+    const gy = holly.y - 70;
+  
+    push();
+    translate(gx, gy);
+  
+    // ✅ flip gun so it matches holly direction
+    // If your gun art points LEFT by default, use this:
+    scale(holly.facing, 1);
+  
+    imageMode(CENTER);
+    image(gunImg, 0, 0, 210, 170);
+    pop();
+  }
+  
+  
+  function drawHollyBars() {
+    const w = 360;
+    const h = 14;
+    const gap = 10;
+  
+    const x = width / 2 - w / 2;   // ✅ centered
+    const y = 16;                  // ✅ top
+  
+    // ---- SHIELD ----
+    noStroke();
+    fill(0, 0, 0, 120);
+    rect(x, y, w, h, 10);
+  
+    const sPct = constrain(hollyShield / HOLLY_MAX_SHIELD, 0, 1);
+    fill(80, 170, 255, 220);
+    rect(x, y, w * sPct, h, 10);
+  
+    // ---- HEALTH ----
+    const y2 = y + h + gap;
+  
+    noStroke();
+    fill(0, 0, 0, 120);
+    rect(x, y2, w, h, 10);
+  
+    const hPct = constrain(hollyHealth / HOLLY_MAX_HEALTH, 0, 1);
+    fill(60, 220, 120, 220);
+    rect(x, y2, w * hPct, h, 10);
+  
+    // labels (optional)
+    fill(255, 255, 255, 230);
+    textAlign(CENTER, BOTTOM);
+    textSize(12);
+    text(`Shield ${Math.ceil(hollyShield)} / ${HOLLY_MAX_SHIELD}`, width/2, y - 2);
+    text(`Health ${Math.ceil(hollyHealth)} / ${HOLLY_MAX_HEALTH}`, width/2, y2 - 2);
+  }
+  
+  
+  
+  function applyDamageToHolly(dmg) {
+    let remaining = dmg;
+  
+    // shield first
+    if (hollyShield > 0) {
+      const take = Math.min(hollyShield, remaining);
+      hollyShield -= take;
+      remaining -= take;
+    }
+  
+    // then health
+    if (remaining > 0) {
+      hollyHealth -= remaining;
+    }
+  
+    // ✅ DO NOT allow enemies to kill her before she kills them
+    // Keep her at minimum 1 HP while the fight is ongoing.
+    if (enemiesKilled < ENEMY_LIMIT) {
+      hollyHealth = Math.max(1, hollyHealth);
+    }
+  }
+  
+  
+  
+  function drawShooterOverlay() {
+    // tint overlay a bit
+    noStroke();
+    fill(0, 0, 0, 70);
+    rect(0, 0, width, height);
+  
+    // instructions + progress
+    fill(255, 255, 255, 230);
+    textAlign(LEFT, TOP);
+    textSize(16);
+    text("Shooter: SPACE to shoot", 16, 16);
+    text(`Enemies: ${enemiesKilled}/${ENEMY_LIMIT}`, 16, 36);
+  
+    // draw holly health/shield HUD
+    drawHollyBars();
+  
+    // draw holly gun (just an overlay image at holly x/y)
+    drawHollyGun();
+  
+    // holly bullets
+    noStroke();
+    fill(255);
+    for (const b of bullets) circle(b.x, b.y, b.r * 2);
+  
+    // enemy bullets
+    fill(255, 224, 102);
+    for (const b of enemyBullets) circle(b.x, b.y, b.r * 2);
+  
+    // enemies
+    for (const e of enemies) drawEnemy(e);
+  }
+  
+  
+  function drawEnemy(e) {
+    // draw skin if available
+    const img = enemyImgs?.[e.skinIndex];
+    if (img) {
+      imageMode(CENTER);
+      image(img, e.x, e.y, e.w, e.h);
+    } else {
+      // fallback rectangle
+      fill(255, 111, 97, 230);
+      rectMode(CENTER);
+      rect(e.x, e.y, e.w, e.h, 12);
+    }
+  
+    // hp bar above
+    const barW = e.w;
+    const barH = 10;
+    const x = e.x - barW / 2;
+    const y = e.y - e.h / 2 - 18;
+  
+    noStroke();
+    fill(0, 0, 0, 120);
+    rectMode(CORNER);
+    rect(x, y, barW, barH, 6);
+  
+    const pct = constrain(e.hp / ENEMY_HP, 0, 1);
+    fill(40, 200, 120, 220);
+    rect(x, y, barW * pct, barH, 6);
+  
+    noFill();
+    stroke(255, 255, 255, 150);
+    strokeWeight(2);
+    rect(x, y, barW, barH, 6);
+    noStroke();
+  
+    rectMode(CORNER);
+  }
+  
+  
+  function drawShooterWinScreen() {
+    // dim overlay
+    noStroke();
+    fill(0, 0, 0, 160);
+    rect(0, 0, width, height);
+  
+    // card
+    const cardW = width * 0.42;
+    const cardH = height * 0.22;
+    const cardX = (width - cardW) / 2;
+    const cardY = (height - cardH) / 2;
+  
+    fill(255, 255, 255, 240);
+    rect(cardX, cardY, cardW, cardH, 18);
+  
+    fill(20);
+    textAlign(CENTER, CENTER);
+    textSize(20);
+    text("YOU WIN 🏆", cardX + cardW / 2, cardY + cardH * 0.35);
+  
+    textSize(13);
+    fill(90);
+    text("No more enemies are spawning.", cardX + cardW / 2, cardY + cardH * 0.52);
+  
+    // restart button
+    const btnW = cardW * 0.40;
+    const btnH = cardH * 0.22;
+    const btnX = cardX + (cardW - btnW) / 2;
+    const btnY = cardY + cardH * 0.66;
+  
+    shooterEndBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+  
+    fill(58, 63, 159);
+    rect(btnX, btnY, btnW, btnH, 14);
+  
+    fill(255);
+    textSize(14);
+    text("Restart", btnX + btnW / 2, btnY + btnH / 2);
+  }
   
   
   function handleWorldTransitions() {
@@ -897,6 +1630,32 @@ function drawRooftop() {
     text("Move: ← → or A / D", 16, 16);
     // later: text(`Candles: ${candlesCollected}/22`, 16, 38);
   }
+
+  function drawChestProgressBar() {
+    const pct = constrain(chest.holdMs / CHEST_HOLD_MS, 0, 1);
+  
+    const w = 220;
+    const h = 16;
+    const x = chest.x() - w / 2;
+    const y = chest.y() - 100;
+  
+    // bg
+    noStroke();
+    fill(255, 255, 255, 90);
+    rect(x, y, w, h, 10);
+  
+    // fill
+    fill(40, 200, 120, 220);
+    rect(x, y, w * pct, h, 10);
+  
+    // tiny outline
+    noFill();
+    stroke(255, 255, 255, 140);
+    strokeWeight(2);
+    rect(x, y, w, h, 10);
+    noStroke();
+  }
+  
     
 
 
@@ -1005,7 +1764,36 @@ function drawRooftop() {
         collected: false,
         unlocked: false,
         scale: 1
-      }
+      },
+      {
+        id: FORTNITE_CANDLE_ID,
+        screen: FORTNITE_SCREEN_INDEX,
+        x: () => width * 0.55,
+        y: () => height * 0.87,
+        collected: false,
+        unlocked: false,
+        scale: 1.0
+      },
+      {
+        id: FORTNITE_REWARD_CANDLE_1,
+        screen: FORTNITE_SCREEN_INDEX,
+        x: () => width * 0.12,      // left side
+        y: () => height * 0.87,
+        collected: false,
+        unlocked: false,
+        scale: 1.0
+      },
+      {
+        id: FORTNITE_REWARD_CANDLE_2,
+        screen: FORTNITE_SCREEN_INDEX,
+        x: () => width * 0.22,      // left side
+        y: () => height * 0.87,
+        collected: false,
+        unlocked: false,
+        scale: 1.0
+      },
+      
+      
       
       
       
@@ -1057,7 +1845,7 @@ function drawRooftop() {
       const cx = c.x();
       const cy = c.y();
   
-      if (isPlayerNearPoint(cx, cy, 150) && c.unlocked === true) {
+      if (isPlayerNearPoint(cx, cy, 200) && c.unlocked === true) {
         c.collected = true;
         candlesCollected += 1;
   
@@ -1094,21 +1882,34 @@ function drawRooftop() {
 
   function keyPressed() {
     if (key === "e" || key === "E") {
-      tryInteract(); 
+      tryInteract();
     }
+  
     if (key === "c" || key === "C") {
-      interactPressed = true; 
+      interactPressed = true;
+    }
+  
+    // Use chug to start shooter
+    if (key === "f" || key === "F") {
+      tryUseChugStartShooter();
+    }
+  
+    // Shoot (only during shooter)
+    if (key === " " && shooterActive && shooterState === "playing" && worldIndex === FORTNITE_SCREEN_INDEX) {
+      shootBullet();
     }
   
     // leave extra screen
     if ((key === "q" || key === "Q") && (mode === "computer" || mode === "bookshelf" || mode === "grillGame")) {
-        mode = "game";
-        worldIndex = returnWorldIndex;
-      }
-      
+      mode = "game";
+      worldIndex = returnWorldIndex;
+    }
   }
+  
 
   function mousePressed() {
+
+
     if (!phoneOn || !ftActive) return;
   
     const inside = (r) =>
@@ -1154,6 +1955,7 @@ function drawRooftop() {
     if (tryInteractWithRooftopPlants()) return;
     if (tryInteractWithGrill()) return;        
     if (tryInteractWithTable()) return;
+    if (tryPickupFortniteLoot()) return;
 
 
   }
