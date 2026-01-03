@@ -1,0 +1,30 @@
+body {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+textarea {
+  width: 32px;  
+  height: 32px; 
+  box-sizing: border-box; 
+  resize: none; 
+  overflow: hidden;
+  font-size: 20px;
+}
+
+#puzzle-holder {
+    position: absolute;
+}
+
+
+.cell {
+    position: relative; 
+    display: inline-block;
+}
+
+.label {
+    position: absolute;
+    left: 3px;
+    top: 2px;             
+    font-size: 10px;
+}
