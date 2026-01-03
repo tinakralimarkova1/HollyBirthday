@@ -676,7 +676,7 @@ function drawRooftop() {
       {
         id: ROOFTOP_PLANT_CANDLE_ID,
         screen: 1, // rooftop worldIndex
-        x: () => width * 0.20,          // behind the correct plant (match plant id 2)
+        x: () => width * 0.27,          // behind the correct plant (match plant id 2)
         y: () => height * 0.75,
         collected: false,
         unlocked: false,
