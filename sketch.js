@@ -1538,10 +1538,15 @@ function drawRooftop() {
     image(tableImg, width * 0.75, height * 0.75, width * 0.4, height * 0.4);
   
     if (phoneOn === true) {
-      drawPhone();
-      updateFaceTimeGame();
-      drawFaceTimeGameUI();
-    }
+        drawPhone(); // ✅ always keep the phone visible
+      
+        // only run the minigame while active
+        if (ftActive) {
+          updateFaceTimeGame();
+          drawFaceTimeGameUI();
+        }
+      }
+      
   
     if (mode === "game" && !phoneOn && isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
       fill(255);
@@ -1578,9 +1583,27 @@ function drawRooftop() {
         // show Tina alone in the phone
         const scr = getPhoneScreenRect();
         if (tinaImg) {
-          imageMode(CORNER);
-          image(tinaImg, scr.x + 16, scr.y + 16, scr.w - 32, scr.h - 32);
+        const pad = 16;
+        const ar = tinaImg.width / tinaImg.height;
+
+        let h = scr.h - pad * 2;
+        let w = h * ar;
+
+        if (w > scr.w - pad * 2) {
+            w = scr.w - pad * 2;
+            h = w / ar;
         }
+
+        imageMode(CENTER);
+        image(
+            tinaImg,
+            scr.x + scr.w / 2,
+            scr.y + scr.h / 2,
+            w,
+            h
+        );
+        }
+
       
         drawDialogueBubble(width * 0.70, height * 0.16, "Tina: happy birthday ❤️\nPress E");
       }
@@ -1595,7 +1618,7 @@ function drawRooftop() {
     if (tinaSeq.stage === "kristen_ready") {
         // show the phone and split FaceTime inside it
         drawPhone();
-        drawPhoneFaceTimeSplit(tinaImg, kristenImg);
+        drawPhoneFaceTimeStack(tinaImg, kristenImg);
       
         // prompt
         drawDialogueBubble(width * 0.70, height * 0.16, "Kristen: happy birthday!!!\nPress E");
@@ -1631,9 +1654,12 @@ function drawRooftop() {
   
 
   function onFaceTimeWin() {
-    // stop phone minigame view
-    ftActive = false;
-    phoneOn = false;
+    ftActive = false;      // stop minigame popups
+    ftPopup = null;
+    ftEndBtn = null;
+  
+    // keep phone visible
+    phoneOn = true;
   
     // unlock Tina reward candle
     const c = candles.find(x => x.id === TINA_FT_CANDLE_ID);
@@ -1642,6 +1668,7 @@ function drawRooftop() {
     tinaSeq.stage = "candle";
     spawnConfetti(30);
   }
+  
   
   
 
@@ -1737,7 +1764,7 @@ function drawRooftop() {
     };
   }
 
-  function drawPhoneFaceTimeSplit(leftImg, rightImg) {
+  function drawPhoneFaceTimeStack(topImg, bottomImg) {
     const scr = getPhoneScreenRect();
   
     // dark overlay inside phone
@@ -1745,33 +1772,70 @@ function drawRooftop() {
     fill(0, 0, 0, 80);
     rect(scr.x, scr.y, scr.w, scr.h, 22);
   
-    // split line
-    fill(255, 255, 255, 70);
-    rect(scr.x + scr.w / 2 - 1.5, scr.y, 3, scr.h);
-  
     const pad = 16;
-    const halfW = (scr.w - pad * 3) / 2;
-    const h = scr.h - pad * 2;
+    const innerX = scr.x + pad;
+    const innerY = scr.y + pad;
+    const innerW = scr.w - pad * 2;
+    const innerH = scr.h - pad * 2;
   
-    // Tina left
-    if (leftImg) {
-      imageMode(CORNER);
-      image(leftImg, scr.x + pad, scr.y + pad, halfW, h);
+    const halfH = (innerH - pad) / 2;
+  
+    // divider line
+    fill(255, 255, 255, 80);
+    rect(innerX, innerY + halfH + pad / 2 - 1.5, innerW, 3);
+  
+    // ---- TOP (Tina) ----
+    if (topImg) {
+      const ar = topImg.width / topImg.height;
+  
+      let h = halfH;
+      let w = h * ar;
+  
+      if (w > innerW) {
+        w = innerW;
+        h = w / ar;
+      }
+  
+      imageMode(CENTER);
+      image(
+        topImg,
+        innerX + innerW / 2,
+        innerY + halfH / 2,
+        w,
+        h
+      );
     }
   
-    // Kristen right
-    if (rightImg) {
-      imageMode(CORNER);
-      image(rightImg, scr.x + pad * 2 + halfW, scr.y + pad, halfW, h);
+    // ---- BOTTOM (Kristen) ----
+    if (bottomImg) {
+      const ar = bottomImg.width / bottomImg.height;
+  
+      let h = halfH;
+      let w = h * ar;
+  
+      if (w > innerW) {
+        w = innerW;
+        h = w / ar;
+      }
+  
+      imageMode(CENTER);
+      image(
+        bottomImg,
+        innerX + innerW / 2,
+        innerY + halfH + pad + halfH / 2,
+        w,
+        h
+      );
     }
   
-    // tiny name labels
+    // labels
     fill(255, 255, 255, 220);
     textSize(14);
     textAlign(LEFT, TOP);
-    text("Tina", scr.x + pad + 6, scr.y + pad + 6);
-    text("Kristen", scr.x + pad * 2 + halfW + 6, scr.y + pad + 6);
+    text("Tina", innerX + 6, innerY + 6);
+    text("Kristen", innerX + 6, innerY + halfH + pad + 6);
   }
+  
   
   
   
@@ -2706,28 +2770,28 @@ function drawRooftop() {
         id: FORTNITE_CANDLE_ID,
         screen: FORTNITE_SCREEN_INDEX,
         x: () => width * 0.55,
-        y: () => height * 0.87,
+        y: () => height * 0.78,
         collected: false,
         unlocked: false,
-        scale: 1.0
+        scale: 2.0
       },
       {
         id: FORTNITE_REWARD_CANDLE_1,
         screen: FORTNITE_SCREEN_INDEX,
         x: () => width * 0.12,      // left side
-        y: () => height * 0.87,
+        y: () => height * 0.78,
         collected: false,
         unlocked: false,
-        scale: 1.0
+        scale: 2.0
       },
       {
         id: FORTNITE_REWARD_CANDLE_2,
         screen: FORTNITE_SCREEN_INDEX,
         x: () => width * 0.22,      // left side
-        y: () => height * 0.87,
+        y: () => height * 0.78,
         collected: false,
         unlocked: false,
-        scale: 1.0
+        scale: 2.0
       },
       {
         id: HALLE_CANDLE_ID,
@@ -3085,6 +3149,16 @@ if (worldIndex === 2) {
       spawnConfetti(10);
       return true;
     }
+
+    if (tinaSeq.stage === "done") {
+        // ✅ keep the facetime screen sitting there
+        drawPhoneFaceTimeStack(tinaImg, kristenImg);
+      
+        drawDialogueBubble(width * 0.62, height * 0.16,
+          "Tina: lets hop on Fortnite\n(continue to next screen →)"
+        );
+      }
+      
   }
   
   
