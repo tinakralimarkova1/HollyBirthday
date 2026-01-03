@@ -24,7 +24,7 @@ async function createPuzzle() {
             const newCell = document.createElement("div");
             newCell.classList.add("cell");
             const newText = document.createElement("textarea");
-            newText.maxLength = "2";
+            newText.maxLength = "3";
         
             const letterArr = key[i][j].split(".");
             const letter = letterArr[0];
@@ -51,7 +51,7 @@ async function createPuzzle() {
             newRow.appendChild(newCell);
             
             requestAnimationFrame(() => {
-                newTet.value = " ";
+                newText.value = " ";
                 newText.focus();
                 newText.setSelectionRange(0, 0);
             });
@@ -94,6 +94,9 @@ async function createHints() {
     }
 }
 
+/**
+ * Highlights correct and incorrect answers per cell
+ */
 function checkAnswers() {
     const puzzleHolder = document.getElementById("puzzle-holder");
 
@@ -116,6 +119,9 @@ function checkAnswers() {
     });
 }
 
+/**
+ * Removes colors from cells
+ */
 function removeClasses() {
     const puzzleHolder = document.getElementById("puzzle-holder");
 
@@ -123,6 +129,36 @@ function removeClasses() {
         Array.from(row.children).forEach(cell => {
             const textarea = cell.querySelector("textarea");    
             textarea.classList.remove("correct", "incorrect"); // Reset
+        });
+    });
+}
+
+/**
+ * Inserts answers (warning: clears all user input)
+ */
+function showKey() {
+    const puzzleHolder = document.getElementById("puzzle-holder");
+
+    Array.from(puzzleHolder.children).forEach(row => {
+        Array.from(row.children).forEach(cell => {
+            const textarea = cell.querySelector("textarea");    
+            textarea.classList.remove("correct", "incorrect"); // Reset
+            textarea.value = " " + textarea.name;
+        });
+    });
+}
+
+/**
+ * Removes all user input, meant to toggle between key/no key
+ */
+function removeKey() {
+    const puzzleHolder = document.getElementById("puzzle-holder");
+
+    Array.from(puzzleHolder.children).forEach(row => {
+        Array.from(row.children).forEach(cell => {
+            const textarea = cell.querySelector("textarea");    
+            textarea.classList.remove("correct", "incorrect"); // Reset
+            textarea.value = " ";
         });
     });
 }

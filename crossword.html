@@ -12,9 +12,14 @@
             Happy Birthday Crossword!
         </h1>
         <div id="game-options">
-            <button onClick="checkAnswers()">Check your Progress</button>
-            <button onClick="removeClasses()">Remove Progress Check</button>
-            <button>Erase Progress + Show Key</button>
+            <div id="check-answers">
+                <button onClick="checkAnswers()">Check your Progress</button>
+                <button onClick="removeClasses()">Remove Progress Check</button>
+            </div>
+            <div id="show-key">
+                <button onClick="showKey()">Show Key</button>
+                <button onClick="removeKey()">Remove Key</button>       
+            </div>    
         </div>
     </header>
     <main>
