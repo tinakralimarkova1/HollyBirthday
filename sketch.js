@@ -28,7 +28,7 @@ const BOOKSHELF_INTERACT_RADIUS = 180; // tweak
 
 
 
-const PLAYER_SPEED = 20;
+const PLAYER_SPEED = 100;
 
 
 
@@ -107,6 +107,18 @@ let grill = {
 };
 
 
+//tina game scene
+const TABLE_INTERACT_RADIUS = 200;
+
+let table = {
+  screen: 2, // tina scene worldIndex
+  x: () => width * 0.75,
+  y: () => height * 0.75
+};
+
+
+let tableImg;
+let phoneOn = false;
 
 
 // candles
@@ -150,6 +162,11 @@ function preload() {
     skylineImg = loadImage("assets/Grill/skyline2.png");
     plantImg = loadImage("assets/Grill/plant.png");
     grillImg = loadImage("assets/Grill/grill.png");
+
+
+    //tina scene
+
+    tableImg = loadImage("assets/TinaGame/table.png");
 
 
 
@@ -234,7 +251,6 @@ function setup() {
   }
 
   function drawGame() {
-    noCursor();
     drawWorld(worldIndex);
     drawCandles(worldIndex);
   
@@ -254,6 +270,9 @@ function setup() {
     } 
     else if (idx === 1){
         drawRooftop();
+    }
+    else if (idx === 2){
+        drawTinaGame();
     }
     
     else {
@@ -586,6 +605,59 @@ function drawRooftop() {
   }
   
   
+  function drawTinaGame() {
+    background(142, 149, 244);
+
+    // Floor
+    noStroke();
+    fill(255, 255, 255, 90);
+    rect(0, height * 0.75, width, height * 0.25);
+  
+    imageMode(CENTER);
+    image(tableImg, width *0.75, height*0.75, width * 0.4, height * 0.4);
+
+    push();
+    if (phoneOn === true) {
+      drawPhone();
+    }
+    pop();
+
+    if (isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
+        fill(230,60,60);
+        textAlign(CENTER, BOTTOM);
+        textSize(18);
+        text("Press E", bookshelf.x() -160, bookshelf.y() - 370);
+
+
+      }
+      
+
+    
+
+
+  }
+
+
+  function drawPhone(){
+
+    // big phone rectangle
+    fill(14, 85, 199);
+    rect(width *0.08, height*0.06, width * 0.3, height * 0.9, 30);
+
+    // small phone rectangle
+    fill(211, 239, 245);
+    rect(width *0.1, height*0.09, width * 0.26, height * 0.84, 30);
+
+    // little label
+    fill(255, 255, 255, 180);
+    textAlign(LEFT, TOP);
+    textSize(12);
+
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(28);
+    text("Phone Screen (placeholder)", width / 2, height / 2);
+  }
 
 
 
@@ -834,6 +906,7 @@ function drawRooftop() {
     if (tryInteractWithMav()) return;
     if (tryInteractWithRooftopPlants()) return;
     if (tryInteractWithGrill()) return;        
+    if (tryInteractWithTable()) return;
 
 
   }
@@ -1039,6 +1112,16 @@ function drawRooftop() {
   }
   
   
+  function tryInteractWithTable(){
+    if (worldIndex !== table.screen) return false;
+  
+    if (isPlayerNearPoint(table.x(), table.y(), TABLE_INTERACT_RADIUS)) {
+
+        phoneOn = true;
+    }
+  
+    return false;
+  }
   
   
   
