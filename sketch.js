@@ -460,7 +460,11 @@ function preload() {
     hollyBreatheFrames = loadFrameSequence("assets/Holly/Breathe/Breathe-0", 5);
     hollyWalkFrames = loadFrameSequence("assets/Holly/Walk/Walk-0", 6);
 
-    // bedroom furniture
+    
+    // cache frame draw dimensions (reduces per-frame math)
+    cacheFrameDrawDims(hollyBreatheFrames, 670);
+    cacheFrameDrawDims(hollyWalkFrames, 670);
+// bedroom furniture
     bedImg = loadImage("assets/Bedroom/Bed.png");
     lampImg = loadImage("assets/Bedroom/lamp.png");
     DeskImg = loadImage("assets/Bedroom/Desk3.png");
@@ -538,11 +542,49 @@ finnImg = loadImage("assets/Basement/Finn.png");   // <-- adjust folder if neede
     }
     return frames;
   }
+
+// --- performance helpers ---
+function cacheFrameDrawDims(frames, targetH) {
+  if (!frames) return;
+  for (const img of frames) {
+    if (!img) continue;
+    // cache scaled draw width for consistent target height
+    img._targetH = targetH;
+    img._targetW = targetH * (img.width / img.height);
+  }
+}
+
+let rooftopSkyLayer = null;
+let rooftopSkyLayerW = 0;
+let rooftopSkyLayerH = 0;
+
+function ensureRooftopSkyLayer() {
+  if (rooftopSkyLayer && rooftopSkyLayerW === width && rooftopSkyLayerH === height) return;
+
+  rooftopSkyLayerW = width;
+  rooftopSkyLayerH = height;
+  rooftopSkyLayer = createGraphics(width, height);
+
+  // Pre-render the rooftop sky gradient once per resize.
+  for (let y = 0; y < height; y++) {
+    const t = map(y, 0, height, 0, 1);
+    const r = lerp(90, 140, t);
+    const g = lerp(140, 190, t);
+    const b = lerp(210, 255, t);
+    rooftopSkyLayer.stroke(r, g, b);
+    rooftopSkyLayer.line(0, y, width, y);
+  }
+  rooftopSkyLayer.noStroke();
+}
+
   
 
 
 function setup() {
+    // Performance: avoid retina overdraw (especially on MacBooks)
+    pixelDensity(1);
     createCanvas(windowWidth, windowHeight);
+    frameRate(60);
     spawnConfetti(40);
     holly = new Player(width / 2, height * 0.68);
     initCandles();
@@ -674,7 +716,10 @@ function setup() {
   
   function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
-  }
+  
+  // rebuild cached layers on resize
+  rooftopSkyLayer = null;
+}
 
   function drawLanding() {
     background(142, 149, 244); // periwinkle
@@ -1801,20 +1846,11 @@ function drawRooftop() {
     // candles: plant, coby, matthew, athena, 
 
 
-    // --- SKY GRADIENT (bluer, cleaner) ---
-    for (let y = 0; y < height; y++) {
-        const t = map(y, 0, height, 0, 1);
-    
-        const r = lerp(90, 140, t);
-        const g = lerp(140, 190, t);
-        const b = lerp(210, 255, t);
-    
-        stroke(r, g, b);
-        line(0, y, width, y);
-    }
+    // --- SKY GRADIENT (cached for performance) ---
+    ensureRooftopSkyLayer();
+    if (rooftopSkyLayer) image(rooftopSkyLayer, 0, 0);
     noStroke();
-
-    // --- SKYLINE ---
+// --- SKYLINE ---
     push();
     imageMode(CENTER);
     image(skylineImg, width / 2, height *0.6, width , height *1.5);
@@ -3319,9 +3355,8 @@ function drawRooftop() {
         
         // scale 
         const targetH = 670;
-        const targetW = targetH * (img.width / img.height);
-        
-        image(img, 0, 0, targetW, targetH);
+        const targetW = (img && img._targetW) ? img._targetW : (targetH * (img.width / img.height));
+image(img, 0, 0, targetW, targetH);
         pop();
         
     }
