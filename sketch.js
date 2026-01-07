@@ -28,7 +28,7 @@ const BOOKSHELF_INTERACT_RADIUS = 180; // tweak
 
 
 
-const PLAYER_SPEED = 100;
+const PLAYER_SPEED = 10;
 
 
 
