@@ -502,7 +502,7 @@ function preload() {
 //
 
     // pickleball scene
-    pickleballBGImg = loadImage("assets/Pickleball/PickleballBG.png.tiff");
+    pickleballBGImg = loadImage("assets/Pickleball/PickleballBG.png");
     findMapImg = loadImage("assets/Pickleball/map1.png"); // <- your path
 
     logoImg = loadImage("assets/Pickleball/logo2.webp");
