@@ -582,7 +582,7 @@ function ensureRooftopSkyLayer() {
 
 function setup() {
     // Performance: avoid retina overdraw (especially on MacBooks)
-    pixelDensity(1);
+   // pixelDensity(5);
     createCanvas(windowWidth, windowHeight);
     frameRate(60);
     spawnConfetti(40);
@@ -3354,9 +3354,9 @@ function drawRooftop() {
         imageMode(CENTER);
         
         // scale 
-        const targetH = 670;
-        const targetW = (img && img._targetW) ? img._targetW : (targetH * (img.width / img.height));
-image(img, 0, 0, targetW, targetH);
+        const targetH = 650;
+        const targetW = (targetH * 0.7);
+        image(img, 0, 0, targetW, targetH);
         pop();
         
     }
