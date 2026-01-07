@@ -486,8 +486,8 @@ function preload() {
     fortniteBGImg = loadImage("assets/Fortnite/fortniteBG.png.jpg");
     chestImg = loadImage("assets/Fortnite/Chest1.png.webp");
     chugSplashImg = loadImage("assets/Fortnite/chugSplash.png");
-    holoImg = loadImage("assets/Fortnite/holo.png");
-    gunImg = loadImage("assets/Fortnite/holo.png");
+    holoImg = loadImage("assets/Fortnite/Holo.png");
+    gunImg = loadImage("assets/Fortnite/hHlo.png");
     victoryImg = loadImage("assets/Fortnite/victory.png");
 
 
@@ -502,7 +502,7 @@ function preload() {
 //
 
     // pickleball scene
-    pickleballBGImg = loadImage("assets/Pickleball/pickleballBG.png.tiff");
+    pickleballBGImg = loadImage("assets/Pickleball/PickleballBG.png.tiff");
     findMapImg = loadImage("assets/Pickleball/map1.png"); // <- your path
 
     logoImg = loadImage("assets/Pickleball/logo2.webp");
