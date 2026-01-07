@@ -487,7 +487,7 @@ function preload() {
     chestImg = loadImage("assets/Fortnite/Chest1.png.webp");
     chugSplashImg = loadImage("assets/Fortnite/chugSplash.png");
     holoImg = loadImage("assets/Fortnite/Holo.png");
-    gunImg = loadImage("assets/Fortnite/hHlo.png");
+    gunImg = loadImage("assets/Fortnite/Holo.png");
     victoryImg = loadImage("assets/Fortnite/victory.png");
 
 
